@@ -51,10 +51,10 @@
         .page{display:none}
         .page.active{display:block}
         .file-drop{width:100%;padding:20px;border:2px dashed #ddd;border-radius:12px;text-align:center;margin-top:12px;cursor:pointer}
-        .history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-        .toggle-history-btn{background:#e8f0fe;color:#1a73e8;border:none;padding:8px 16px;border-radius:20px;font-size:14px;cursor:pointer}
-        .history-list{display:none;margin-top:12px}
-        .history-list.show{display:block}
+        .collapsible-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+        .toggle-btn{background:#e8f0fe;color:#1a73e8;border:none;padding:8px 16px;border-radius:20px;font-size:14px;cursor:pointer}
+        .collapsible-content{display:none;margin-top:12px}
+        .collapsible-content.show{display:block}
         .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center}
         .modal.active{display:flex}
         .modal-content{background:#fff;border-radius:24px;padding:24px;width:90%;max-width:340px}
@@ -94,22 +94,35 @@
             </div>
         </div>
 
+        <!-- Детальная статистика (скрытая) -->
         <div class="card">
-            <div class="card-title">📈 Детальная статистика</div>
-            <div id="detailedStats"></div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">📅 Помесячная статистика</div>
-            <div id="monthlyStats"></div>
-        </div>
-
-        <div class="card">
-            <div class="history-header">
-                <div class="card-title" style="margin-bottom:0">📋 История заправок</div>
-                <button class="toggle-history-btn" id="toggleHistoryBtn">▼ Показать</button>
+            <div class="collapsible-header">
+                <div class="card-title" style="margin-bottom:0">📈 Детальная статистика</div>
+                <button class="toggle-btn" data-target="detailedStats">▼ Показать</button>
             </div>
-            <div class="history-list" id="historyList">
+            <div class="collapsible-content" id="detailedStatsContent">
+                <div id="detailedStats"></div>
+            </div>
+        </div>
+
+        <!-- Помесячная статистика (скрытая) -->
+        <div class="card">
+            <div class="collapsible-header">
+                <div class="card-title" style="margin-bottom:0">📅 Помесячная статистика</div>
+                <button class="toggle-btn" data-target="monthlyStats">▼ Показать</button>
+            </div>
+            <div class="collapsible-content" id="monthlyStatsContent">
+                <div id="monthlyStats"></div>
+            </div>
+        </div>
+
+        <!-- История заправок (скрытая) -->
+        <div class="card">
+            <div class="collapsible-header">
+                <div class="card-title" style="margin-bottom:0">📋 История заправок</div>
+                <button class="toggle-btn" data-target="refillsHistory">▼ Показать</button>
+            </div>
+            <div class="collapsible-content" id="refillsHistoryContent">
                 <div id="refillsList"></div>
             </div>
         </div>
@@ -182,9 +195,15 @@
         let editingNoteKey = null;
         let editingNoteCarId = null;
         
-        // По умолчанию история скрыта
-        let historyVisible = localStorage.getItem('historyVisible') === 'true';
-        if (historyVisible === undefined) historyVisible = false;
+        // Состояния скрытых блоков
+        let detailedStatsVisible = false;
+        let monthlyStatsVisible = false;
+        let refillsHistoryVisible = false;
+        
+        // Загружаем состояния
+        if (localStorage.getItem('detailedStatsVisible') === 'true') detailedStatsVisible = true;
+        if (localStorage.getItem('monthlyStatsVisible') === 'true') monthlyStatsVisible = true;
+        if (localStorage.getItem('refillsHistoryVisible') === 'true') refillsHistoryVisible = true;
 
         function loadData() {
             const saved = localStorage.getItem('fuelData');
@@ -447,17 +466,8 @@
             appData.currentCarId = id;
             saveData();
             renderAll();
-            // Обновляем поле цены для текущего авто
             const car = getCurrentCar();
             document.getElementById('price').value = car.pricePerLiter;
-            if (historyVisible) {
-                historyVisible = false;
-                localStorage.setItem('historyVisible', 'false');
-                const list = document.getElementById('historyList');
-                const btn = document.getElementById('toggleHistoryBtn');
-                if (list) list.classList.remove('show');
-                if (btn) btn.innerHTML = '▼ Показать';
-            }
         }
         
         function deleteCar(id) {
@@ -470,19 +480,79 @@
             }
         }
         
-        function toggleHistory() {
-            historyVisible = !historyVisible;
-            const list = document.getElementById('historyList');
-            const btn = document.getElementById('toggleHistoryBtn');
-            if (historyVisible) {
-                list.classList.add('show');
-                btn.innerHTML = '▲ Скрыть';
-                renderRefillsList();
-            } else {
-                list.classList.remove('show');
+        // Переключение блоков
+        function toggleSection(sectionId, storageKey) {
+            const content = document.getElementById(sectionId);
+            const btn = document.querySelector(`.toggle-btn[data-target="${sectionId.replace('Content', '')}"]`);
+            if (!content || !btn) return;
+            
+            let isVisible = content.classList.contains('show');
+            if (isVisible) {
+                content.classList.remove('show');
                 btn.innerHTML = '▼ Показать';
+                localStorage.setItem(storageKey, 'false');
+            } else {
+                content.classList.add('show');
+                btn.innerHTML = '▲ Скрыть';
+                localStorage.setItem(storageKey, 'true');
+                // Обновляем содержимое при открытии
+                if (sectionId === 'detailedStatsContent') renderDetailedStats();
+                if (sectionId === 'monthlyStatsContent') renderMonthlyStats();
+                if (sectionId === 'refillsHistoryContent') renderRefillsList();
             }
-            localStorage.setItem('historyVisible', historyVisible);
+        }
+        
+        function renderDetailedStats() {
+            const car = getCurrentCar();
+            const refills = car.refills;
+            const overall = calculateOverallStats(refills);
+            const current = calculateCurrentConsumption(refills);
+            const container = document.getElementById('detailedStats');
+            
+            if (overall) {
+                container.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        <strong>📊 Общая статистика:</strong><br>
+                        🛣️ Пробег: ${overall.totalDistance} км<br>
+                        ⛽ Топлива: ${overall.totalLiters} л<br>
+                        💰 Затраты: ${overall.totalCost} ₽<br>
+                        📊 Средний расход: ${overall.avgConsumption} л/100км<br>
+                        💵 ${overall.costPer100km} ₽/100км<br>
+                        📝 Заправок: ${overall.refillCount} (использовано: ${overall.effectiveRefills})
+                    </div>
+                    ${current ? `<div style="margin-top: 12px;">
+                        <strong>📈 Текущий расход (между последними заправками):</strong><br>
+                        📊 ${current.consumption} л/100км<br>
+                        💵 ${current.costPer100km} ₽/100км<br>
+                        🛣️ ${current.distance} км пробега
+                    </div>` : ''}
+                `;
+            } else {
+                container.innerHTML = '<div class="empty-state">📊 Добавьте минимум 2 заправки для статистики</div>';
+            }
+        }
+        
+        function renderMonthlyStats() {
+            const car = getCurrentCar();
+            const monthly = calculateMonthlyStats(car.refills);
+            const container = document.getElementById('monthlyStats');
+            
+            if (monthly.length > 0) {
+                container.innerHTML = monthly.map(m => `
+                    <div class="month-item">
+                        <div class="month-title">📅 ${m.monthName}</div>
+                        <div class="month-stats">
+                            🛣️ Пробег: ${m.monthKm} км<br>
+                            ⛽ Заправок: ${m.refills.length}<br>
+                            📊 Расход: ${m.avgConsumption} л/100км<br>
+                            💵 ${m.costPer100km} ₽/100км<br>
+                            💰 Затраты: ${m.totalCost.toFixed(0)} ₽
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="empty-state">📅 Нет данных по месяцам</div>';
+            }
         }
         
         // Экспорт/Импорт
@@ -509,12 +579,6 @@
                         saveData();
                         renderAll();
                         showToast('✅ Импорт выполнен');
-                        historyVisible = false;
-                        localStorage.setItem('historyVisible', 'false');
-                        const list = document.getElementById('historyList');
-                        const btn = document.getElementById('toggleHistoryBtn');
-                        if (list) list.classList.remove('show');
-                        if (btn) btn.innerHTML = '▼ Показать';
                     } else {
                         showToast('❌ Неверный формат', true);
                     }
@@ -541,12 +605,6 @@
                 saveData();
                 renderAll();
                 showToast('✅ Все данные очищены');
-                historyVisible = false;
-                localStorage.setItem('historyVisible', 'false');
-                const list = document.getElementById('historyList');
-                const btn = document.getElementById('toggleHistoryBtn');
-                if (list) list.classList.remove('show');
-                if (btn) btn.innerHTML = '▼ Показать';
             }
         }
         
@@ -622,53 +680,6 @@
             } else {
                 document.getElementById('avgConsumption').innerHTML = '--';
             }
-            
-            // Детальная статистика
-            const overall = calculateOverallStats(refills);
-            const detailsDiv = document.getElementById('detailedStats');
-            
-            if (overall) {
-                detailsDiv.innerHTML = `
-                    <div style="margin-bottom: 12px;">
-                        <strong>📊 Общая статистика:</strong><br>
-                        🛣️ Пробег: ${overall.totalDistance} км<br>
-                        ⛽ Топлива: ${overall.totalLiters} л<br>
-                        💰 Затраты: ${overall.totalCost} ₽<br>
-                        📊 Средний расход: ${overall.avgConsumption} л/100км<br>
-                        💵 ${overall.costPer100km} ₽/100км<br>
-                        📝 Заправок: ${overall.refillCount} (использовано: ${overall.effectiveRefills})
-                    </div>
-                    ${current ? `<div style="margin-top: 12px;">
-                        <strong>📈 Текущий расход (между последними заправками):</strong><br>
-                        📊 ${current.consumption} л/100км<br>
-                        💵 ${current.costPer100km} ₽/100км<br>
-                        🛣️ ${current.distance} км пробега
-                    </div>` : ''}
-                `;
-            } else {
-                detailsDiv.innerHTML = '<div class="empty-state">📊 Добавьте минимум 2 заправки для статистики</div>';
-            }
-            
-            // Помесячная статистика
-            const monthly = calculateMonthlyStats(refills);
-            const monthlyDiv = document.getElementById('monthlyStats');
-            
-            if (monthly.length > 0) {
-                monthlyDiv.innerHTML = monthly.map(m => `
-                    <div class="month-item">
-                        <div class="month-title">📅 ${m.monthName}</div>
-                        <div class="month-stats">
-                            🛣️ Пробег: ${m.monthKm} км<br>
-                            ⛽ Заправок: ${m.refills.length}<br>
-                            📊 Расход: ${m.avgConsumption} л/100км<br>
-                            💵 ${m.costPer100km} ₽/100км<br>
-                            💰 Затраты: ${m.totalCost.toFixed(0)} ₽
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                monthlyDiv.innerHTML = '<div class="empty-state">📅 Нет данных по месяцам</div>';
-            }
         }
         
         function renderCarsList() {
@@ -710,6 +721,44 @@
             document.getElementById('oilInterval').value = oil?.interval || 10000;
         }
         
+        function restoreCollapsibleStates() {
+            // Детальная статистика
+            const detailedContent = document.getElementById('detailedStatsContent');
+            const detailedBtn = document.querySelector('.toggle-btn[data-target="detailedStats"]');
+            if (detailedStatsVisible) {
+                detailedContent.classList.add('show');
+                if (detailedBtn) detailedBtn.innerHTML = '▲ Скрыть';
+                renderDetailedStats();
+            } else {
+                detailedContent.classList.remove('show');
+                if (detailedBtn) detailedBtn.innerHTML = '▼ Показать';
+            }
+            
+            // Помесячная статистика
+            const monthlyContent = document.getElementById('monthlyStatsContent');
+            const monthlyBtn = document.querySelector('.toggle-btn[data-target="monthlyStats"]');
+            if (monthlyStatsVisible) {
+                monthlyContent.classList.add('show');
+                if (monthlyBtn) monthlyBtn.innerHTML = '▲ Скрыть';
+                renderMonthlyStats();
+            } else {
+                monthlyContent.classList.remove('show');
+                if (monthlyBtn) monthlyBtn.innerHTML = '▼ Показать';
+            }
+            
+            // История заправок
+            const historyContent = document.getElementById('refillsHistoryContent');
+            const historyBtn = document.querySelector('.toggle-btn[data-target="refillsHistory"]');
+            if (refillsHistoryVisible) {
+                historyContent.classList.add('show');
+                if (historyBtn) historyBtn.innerHTML = '▲ Скрыть';
+                renderRefillsList();
+            } else {
+                historyContent.classList.remove('show');
+                if (historyBtn) historyBtn.innerHTML = '▼ Показать';
+            }
+        }
+        
         function renderAll() {
             const car = getCurrentCar();
             document.getElementById('price').value = car.pricePerLiter;
@@ -717,20 +766,32 @@
             renderStats();
             renderNotes();
             renderSettings();
-            if (historyVisible) renderRefillsList();
+            restoreCollapsibleStates();
         }
         
         function init() {
             loadData();
             renderAll();
             
-            // Принудительно скрываем историю при загрузке
-            historyVisible = false;
-            localStorage.setItem('historyVisible', 'false');
-            const list = document.getElementById('historyList');
-            const btn = document.getElementById('toggleHistoryBtn');
-            if (list) list.classList.remove('show');
-            if (btn) btn.innerHTML = '▼ Показать';
+            // Обработчики кнопок переключения
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const target = btn.getAttribute('data-target');
+                    if (target === 'detailedStats') {
+                        toggleSection('detailedStatsContent', 'detailedStatsVisible');
+                        detailedStatsVisible = !detailedStatsVisible;
+                        if (detailedStatsVisible && !document.getElementById('detailedStats').innerHTML) renderDetailedStats();
+                    } else if (target === 'monthlyStats') {
+                        toggleSection('monthlyStatsContent', 'monthlyStatsVisible');
+                        monthlyStatsVisible = !monthlyStatsVisible;
+                        if (monthlyStatsVisible && !document.getElementById('monthlyStats').innerHTML) renderMonthlyStats();
+                    } else if (target === 'refillsHistory') {
+                        toggleSection('refillsHistoryContent', 'refillsHistoryVisible');
+                        refillsHistoryVisible = !refillsHistoryVisible;
+                        if (refillsHistoryVisible && !document.getElementById('refillsList').innerHTML) renderRefillsList();
+                    }
+                };
+            });
             
             document.getElementById('saveRefillBtn').onclick = () => {
                 const l = document.getElementById('liters').value;
@@ -741,8 +802,6 @@
                 document.getElementById('liters').value = '';
                 document.getElementById('odometer').value = '';
             };
-            
-            document.getElementById('toggleHistoryBtn').onclick = toggleHistory;
             
             document.getElementById('addNoteBtn').onclick = () => {
                 const k = document.getElementById('noteKey').value.trim();
