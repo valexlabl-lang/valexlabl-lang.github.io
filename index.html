@@ -7,7 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a73e8">
     
-    <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231a73e8'/%3E%3Cpath d='M256 80L120 176v160l136 96 136-96V176L256 80z' fill='%23ffffff' opacity='0.3'/%3E%3Cpath d='M220 150h72v212h-72z' fill='%23ffffff'/%3E%3Cpath d='M280 150h36v212h-36z' fill='%23ffffff'/%3E%3Crect x='180' y='280' width='40' height='100' rx='5' fill='%23ffffff'/%3E%3Crect x='292' y='280' width='40' height='100' rx='5' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='362' r='30' fill='%23ffc107'/%3E%3C/svg%3E">
+    <!-- Иконка для экрана Домой -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231a73e8'/%3E%3Ctext x='50' y='72' font-size='50' text-anchor='middle' fill='white'%3E⛽%3C/text%3E%3C/svg%3E">
     
     <title>FuelTracker</title>
     <style>
@@ -60,6 +61,9 @@
         .modal-content h3{margin-bottom:16px}
         .modal-buttons{display:flex;gap:12px;margin-top:16px}
         .modal-buttons button{flex:1;margin-top:0}
+        .month-item{background:#f8f9fa;border-radius:12px;padding:12px;margin-bottom:8px}
+        .month-title{font-weight:600;color:#1a73e8;margin-bottom:6px}
+        .month-stats{font-size:13px;color:#333}
     </style>
 </head>
 <body>
@@ -68,6 +72,7 @@
         <div class="car-selector" id="carSelector"></div>
     </div>
 
+    <!-- Страница заправок -->
     <div id="page-refill" class="page active">
         <div class="card">
             <div class="card-title">➕ Добавить заправку</div>
@@ -90,6 +95,16 @@
         </div>
 
         <div class="card">
+            <div class="card-title">📈 Детальная статистика</div>
+            <div id="detailedStats"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📅 Помесячная статистика</div>
+            <div id="monthlyStats"></div>
+        </div>
+
+        <div class="card">
             <div class="history-header">
                 <div class="card-title" style="margin-bottom:0">📋 История заправок</div>
                 <button class="toggle-history-btn" id="toggleHistoryBtn">▼ Показать</button>
@@ -100,6 +115,7 @@
         </div>
     </div>
 
+    <!-- Страница заметок -->
     <div id="page-notes" class="page">
         <div class="card">
             <div class="card-title">📝 Добавить заметку</div>
@@ -113,6 +129,7 @@
         </div>
     </div>
 
+    <!-- Страница настроек -->
     <div id="page-settings" class="page">
         <div class="card">
             <div class="card-title">🚗 Управление авто</div>
@@ -132,9 +149,9 @@
         <div class="card">
             <div class="card-title">💾 Данные</div>
             <button class="btn" id="exportBtn">📤 Экспорт данных</button>
-            <div class="file-drop" id="fileDropZone">📁 Нажмите или перетащите JSON файл</div>
+            <div class="file-drop" id="fileDropZone">📁 Нажмите или перетащите JSON файл для импорта</div>
             <input type="file" id="importFile" accept=".json" style="display:none">
-            <button class="btn btn-danger" id="clearBtn" style="background:#dc3545;margin-top:8px">🗑️ Очистить всё</button>
+            <button class="btn btn-danger" id="clearBtn" style="background:#dc3545;margin-top:8px">🗑️ Очистить все данные</button>
         </div>
     </div>
 
@@ -146,6 +163,7 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- Модальное окно для редактирования заметки -->
     <div class="modal" id="editNoteModal">
         <div class="modal-content">
             <h3>✏️ Редактировать заметку</h3>
@@ -159,22 +177,14 @@
     </div>
 
     <script>
+        // Данные
         let appData = { cars: {}, currentCarId: null };
         let editingNoteKey = null;
         let editingNoteCarId = null;
         
-        // ПО УМОЛЧАНИЮ ИСТОРИЯ СКРЫТА (false)
-        let historyVisible = false;
-        
-        // Загружаем состояние истории из localStorage, если оно там есть
-        const savedHistoryState = localStorage.getItem('historyVisible');
-        if (savedHistoryState !== null) {
-            historyVisible = savedHistoryState === 'true';
-        } else {
-            // Если нет сохранённого состояния, устанавливаем скрытое состояние
-            historyVisible = false;
-            localStorage.setItem('historyVisible', 'false');
-        }
+        // По умолчанию история скрыта
+        let historyVisible = localStorage.getItem('historyVisible') === 'true';
+        if (historyVisible === undefined) historyVisible = false;
 
         function loadData() {
             const saved = localStorage.getItem('fuelData');
@@ -220,6 +230,101 @@
             setTimeout(() => { toast.style.opacity = '0'; }, 2000);
         }
         
+        // Расчет общей статистики
+        function calculateOverallStats(refills) {
+            if (refills.length < 2) return null;
+            
+            const sorted = [...refills].sort((a, b) => a.odometer - b.odometer);
+            const startKm = sorted[0].odometer;
+            const endKm = sorted[sorted.length - 1].odometer;
+            const totalDistance = endKm - startKm;
+            
+            let totalLiters = 0, totalCost = 0;
+            for (let i = 1; i < sorted.length; i++) {
+                totalLiters += sorted[i].liters;
+                totalCost += sorted[i].cost;
+            }
+            
+            if (totalDistance <= 0 || totalLiters <= 0) return null;
+            
+            return {
+                totalDistance: totalDistance,
+                totalLiters: totalLiters.toFixed(1),
+                totalCost: totalCost.toFixed(0),
+                avgConsumption: ((totalLiters / totalDistance) * 100).toFixed(1),
+                costPer100km: ((totalCost / totalDistance) * 100).toFixed(1),
+                refillCount: refills.length,
+                effectiveRefills: refills.length - 1
+            };
+        }
+        
+        // Расчет помесячной статистики
+        function calculateMonthlyStats(refills) {
+            if (refills.length === 0) return [];
+            
+            const monthly = {};
+            
+            for (const refill of refills) {
+                const date = new Date(refill.date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const monthName = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+                
+                if (!monthly[monthKey]) {
+                    monthly[monthKey] = {
+                        monthName: monthName,
+                        refills: [],
+                        totalLiters: 0,
+                        totalCost: 0,
+                        firstOdometer: refill.odometer,
+                        lastOdometer: refill.odometer
+                    };
+                }
+                
+                monthly[monthKey].refills.push(refill);
+                monthly[monthKey].totalLiters += refill.liters;
+                monthly[monthKey].totalCost += refill.cost;
+                monthly[monthKey].firstOdometer = Math.min(monthly[monthKey].firstOdometer, refill.odometer);
+                monthly[monthKey].lastOdometer = Math.max(monthly[monthKey].lastOdometer, refill.odometer);
+            }
+            
+            const result = [];
+            for (const key in monthly) {
+                const month = monthly[key];
+                const monthKm = month.lastOdometer - month.firstOdometer;
+                month.monthKm = monthKm;
+                if (monthKm > 0 && month.totalLiters > 0) {
+                    month.avgConsumption = ((month.totalLiters / monthKm) * 100).toFixed(1);
+                    month.costPer100km = ((month.totalCost / monthKm) * 100).toFixed(1);
+                } else {
+                    month.avgConsumption = '—';
+                    month.costPer100km = '—';
+                }
+                result.push(month);
+            }
+            
+            return result.sort((a, b) => b.monthName.localeCompare(a.monthName)).slice(0, 6);
+        }
+        
+        // Расчет текущего расхода
+        function calculateCurrentConsumption(refills) {
+            if (refills.length < 2) return null;
+            
+            const sorted = [...refills].sort((a, b) => b.odometer - a.odometer);
+            const last = sorted[0];
+            const prev = sorted[1];
+            const distance = last.odometer - prev.odometer;
+            
+            if (distance <= 0) return null;
+            
+            return {
+                consumption: ((last.liters / distance) * 100).toFixed(1),
+                costPer100km: ((last.cost / distance) * 100).toFixed(1),
+                distance: distance,
+                pricePerLiter: (last.cost / last.liters).toFixed(2)
+            };
+        }
+        
+        // Заправки
         function addRefill(l, o, p) {
             const car = getCurrentCar();
             const cost = l * p;
@@ -249,15 +354,7 @@
             }
         }
         
-        function calcConsumption() {
-            const car = getCurrentCar();
-            if (car.refills.length < 2) return null;
-            const s = [...car.refills].sort((a, b) => b.odometer - a.odometer);
-            const dist = s[0].odometer - s[1].odometer;
-            if (dist <= 0) return null;
-            return ((s[0].liters / dist) * 100).toFixed(1);
-        }
-        
+        // Заметки
         function addNote(k, v) {
             if (!k || !v) { showToast('❌ Заполните поля', true); return false; }
             const car = getCurrentCar();
@@ -308,6 +405,7 @@
             editingNoteCarId = null;
         }
         
+        // Масло
         function setOilReminder(o, i) {
             const car = getCurrentCar();
             car.oilChange = { lastOdometer: parseInt(o), interval: parseInt(i), nextOdometer: parseInt(o) + parseInt(i) };
@@ -327,6 +425,7 @@
             }
         }
         
+        // Автомобили
         function addCar(name) {
             if (!name) { showToast('❌ Введите название', true); return; }
             const id = 'car_' + Date.now();
@@ -348,7 +447,9 @@
             appData.currentCarId = id;
             saveData();
             renderAll();
-            // При смене авто - история остаётся скрытой
+            // Обновляем поле цены для текущего авто
+            const car = getCurrentCar();
+            document.getElementById('price').value = car.pricePerLiter;
             if (historyVisible) {
                 historyVisible = false;
                 localStorage.setItem('historyVisible', 'false');
@@ -384,6 +485,7 @@
             localStorage.setItem('historyVisible', historyVisible);
         }
         
+        // Экспорт/Импорт
         function exportData() {
             const data = JSON.stringify(appData, null, 2);
             const blob = new Blob([data], { type: 'application/json' });
@@ -391,7 +493,7 @@
             a.href = URL.createObjectURL(blob);
             a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
             a.click();
-            showToast('📤 Экспорт');
+            showToast('📤 Экспорт выполнен');
         }
         
         function importData(file) {
@@ -407,7 +509,6 @@
                         saveData();
                         renderAll();
                         showToast('✅ Импорт выполнен');
-                        // ПОСЛЕ ИМПОРТА - ИСТОРИЯ СКРЫТАЯ
                         historyVisible = false;
                         localStorage.setItem('historyVisible', 'false');
                         const list = document.getElementById('historyList');
@@ -439,8 +540,7 @@
                 appData.currentCarId = id;
                 saveData();
                 renderAll();
-                showToast('✅ Очищено');
-                // После очистки - история скрыта
+                showToast('✅ Все данные очищены');
                 historyVisible = false;
                 localStorage.setItem('historyVisible', 'false');
                 const list = document.getElementById('historyList');
@@ -450,6 +550,7 @@
             }
         }
         
+        // Рендер
         function renderCarSelector() {
             const container = document.getElementById('carSelector');
             let html = '';
@@ -505,13 +606,69 @@
         
         function renderStats() {
             const car = getCurrentCar();
-            const totalLiters = car.refills.reduce((s, r) => s + r.liters, 0).toFixed(1);
-            const totalCost = car.refills.reduce((s, r) => s + r.cost, 0).toFixed(0);
-            document.getElementById('totalRefills').textContent = car.refills.length;
+            const refills = car.refills;
+            
+            const totalRefills = refills.length;
+            const totalLiters = refills.reduce((s, r) => s + r.liters, 0).toFixed(1);
+            const totalCost = refills.reduce((s, r) => s + r.cost, 0).toFixed(0);
+            
+            document.getElementById('totalRefills').textContent = totalRefills;
             document.getElementById('totalLiters').textContent = totalLiters;
             document.getElementById('totalCost').textContent = totalCost;
-            const cons = calcConsumption();
-            document.getElementById('avgConsumption').innerHTML = cons ? `${cons}<span style="font-size:11px">л/100км</span>` : '--';
+            
+            const current = calculateCurrentConsumption(refills);
+            if (current) {
+                document.getElementById('avgConsumption').innerHTML = `${current.consumption}<span style="font-size:11px">л/100км</span>`;
+            } else {
+                document.getElementById('avgConsumption').innerHTML = '--';
+            }
+            
+            // Детальная статистика
+            const overall = calculateOverallStats(refills);
+            const detailsDiv = document.getElementById('detailedStats');
+            
+            if (overall) {
+                detailsDiv.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        <strong>📊 Общая статистика:</strong><br>
+                        🛣️ Пробег: ${overall.totalDistance} км<br>
+                        ⛽ Топлива: ${overall.totalLiters} л<br>
+                        💰 Затраты: ${overall.totalCost} ₽<br>
+                        📊 Средний расход: ${overall.avgConsumption} л/100км<br>
+                        💵 ${overall.costPer100km} ₽/100км<br>
+                        📝 Заправок: ${overall.refillCount} (использовано: ${overall.effectiveRefills})
+                    </div>
+                    ${current ? `<div style="margin-top: 12px;">
+                        <strong>📈 Текущий расход (между последними заправками):</strong><br>
+                        📊 ${current.consumption} л/100км<br>
+                        💵 ${current.costPer100km} ₽/100км<br>
+                        🛣️ ${current.distance} км пробега
+                    </div>` : ''}
+                `;
+            } else {
+                detailsDiv.innerHTML = '<div class="empty-state">📊 Добавьте минимум 2 заправки для статистики</div>';
+            }
+            
+            // Помесячная статистика
+            const monthly = calculateMonthlyStats(refills);
+            const monthlyDiv = document.getElementById('monthlyStats');
+            
+            if (monthly.length > 0) {
+                monthlyDiv.innerHTML = monthly.map(m => `
+                    <div class="month-item">
+                        <div class="month-title">📅 ${m.monthName}</div>
+                        <div class="month-stats">
+                            🛣️ Пробег: ${m.monthKm} км<br>
+                            ⛽ Заправок: ${m.refills.length}<br>
+                            📊 Расход: ${m.avgConsumption} л/100км<br>
+                            💵 ${m.costPer100km} ₽/100км<br>
+                            💰 Затраты: ${m.totalCost.toFixed(0)} ₽
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                monthlyDiv.innerHTML = '<div class="empty-state">📅 Нет данных по месяцам</div>';
+            }
         }
         
         function renderCarsList() {
@@ -539,10 +696,11 @@
                 const remaining = oil.nextOdometer - currentKm;
                 const percent = Math.min(100, Math.max(0, (currentKm - oil.lastOdometer) / oil.interval * 100));
                 oilDiv.innerHTML = `
-                    <div>🛢️ Последняя: ${oil.lastOdometer} км</div>
+                    <div>🛢️ Последняя замена: ${oil.lastOdometer} км</div>
                     <div>📏 Интервал: ${oil.interval} км</div>
-                    <div>🎯 Следующая: ${oil.nextOdometer} км</div>
-                    <div>📊 Осталось: ${remaining} км</div>
+                    <div>🎯 Следующая замена: ${oil.nextOdometer} км</div>
+                    <div>📊 Текущий пробег: ${currentKm} км</div>
+                    <div>📍 Осталось: ${remaining} км</div>
                     <div style="margin-top:8px;height:6px;background:#eee;border-radius:3px"><div style="width:${percent}%;height:6px;background:#1a73e8;border-radius:3px"></div></div>
                 `;
             } else {
@@ -553,6 +711,8 @@
         }
         
         function renderAll() {
+            const car = getCurrentCar();
+            document.getElementById('price').value = car.pricePerLiter;
             renderCarSelector();
             renderStats();
             renderNotes();
@@ -564,7 +724,7 @@
             loadData();
             renderAll();
             
-            // Принудительно скрываем историю при загрузке страницы
+            // Принудительно скрываем историю при загрузке
             historyVisible = false;
             localStorage.setItem('historyVisible', 'false');
             const list = document.getElementById('historyList');
@@ -618,7 +778,7 @@
                 drop.style.borderColor = '#ddd';
                 const f = e.dataTransfer.files[0];
                 if (f && f.name.endsWith('.json')) importData(f);
-                else showToast('❌ JSON файл', true);
+                else showToast('❌ Выберите JSON файл', true);
             };
             fileInp.onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ''; };
             
