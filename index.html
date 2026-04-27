@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a73e8">
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231a73e8'/%3E%3Cpath d='M256 80L120 176v160l136 96 136-96V176L256 80z' fill='%23ffffff' opacity='0.3'/%3E%3Cpath d='M220 150h72v212h-72z' fill='%23ffffff'/%3E%3Cpath d='M280 150h36v212h-36z' fill='%23ffffff'/%3E%3Crect x='180' y='280' width='40' height='100' rx='5' fill='%23ffffff'/%3E%3Crect x='292' y='280' width='40' height='100' rx='5' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='362' r='30' fill='%23ffc107'/%3E%3C/svg%3E">
+    
+    <title>FuelTracker</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:system-ui,-apple-system;background:#f5f5f5;padding:16px;padding-bottom:80px}
+        .header{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:20px 16px;margin:-16px -16px 16px -16px;border-radius:0 0 20px 20px}
+        .header h1{font-size:24px;display:flex;align-items:center;gap:10px}
+        .car-selector{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:4px}
+        .car-btn{background:rgba(255,255,255,0.2);border:none;padding:8px 16px;border-radius:20px;color:#fff;white-space:nowrap;cursor:pointer}
+        .car-btn.active{background:#fff;color:#1a73e8}
+        .car-btn.add-car{background:rgba(255,255,255,0.3);border:1px dashed #fff}
+        .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+        .card-title{font-size:18px;font-weight:600;margin-bottom:12px;color:#1a73e8}
+        .input-group{margin-bottom:12px}
+        .input-group label{font-size:12px;color:#666;display:block;margin-bottom:4px}
+        .input-group input{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+        .input-row{display:flex;gap:12px}
+        .btn{background:#1a73e8;color:#fff;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;width:100%;cursor:pointer;margin-top:8px}
+        .btn-danger{background:#dc3545}
+        .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+        .stat-card{background:#f8f9fa;border-radius:12px;padding:12px;text-align:center}
+        .stat-value{font-size:24px;font-weight:700;color:#1a73e8}
+        .stat-label{font-size:11px;color:#666}
+        .refill-item{background:#f8f9fa;border-radius:12px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+        .refill-date{font-size:11px;color:#666}
+        .refill-details{font-weight:500}
+        .note-item{background:#f8f9fa;border-radius:12px;padding:12px;margin-bottom:8px}
+        .note-key{font-weight:600;color:#1a73e8;margin-bottom:4px}
+        .note-value{font-size:14px;color:#333;margin-bottom:8px}
+        .note-actions{display:flex;gap:8px}
+        .empty-state{text-align:center;padding:40px;color:#666}
+        .icon-btn{background:none;border:none;font-size:18px;padding:8px;cursor:pointer;border-radius:8px}
+        .icon-btn.edit{color:#1a73e8}
+        .icon-btn.delete{color:#dc3545}
+        .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:40px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000}
+        .tab-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;padding:8px 16px 20px;border-top:1px solid #ddd}
+        .tab{flex:1;text-align:center;padding:8px;background:none;border:none;font-size:12px;color:#666;cursor:pointer}
+        .tab.active{color:#1a73e8}
+        .tab-icon{font-size:22px;display:block;margin-bottom:4px}
+        .page{display:none}
+        .page.active{display:block}
+        .file-drop{width:100%;padding:20px;border:2px dashed #ddd;border-radius:12px;text-align:center;margin-top:12px;cursor:pointer}
+        .history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+        .toggle-history-btn{background:#e8f0fe;color:#1a73e8;border:none;padding:8px 16px;border-radius:20px;font-size:14px;cursor:pointer}
+        .history-list{display:none;margin-top:12px}
+        .history-list.show{display:block}
+        .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center}
+        .modal.active{display:flex}
+        .modal-content{background:#fff;border-radius:24px;padding:24px;width:90%;max-width:340px}
+        .modal-content h3{margin-bottom:16px}
+        .modal-buttons{display:flex;gap:12px;margin-top:16px}
+        .modal-buttons button{flex:1;margin-top:0}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⛽ FuelTracker</h1>
+        <div class="car-selector" id="carSelector"></div>
+    </div>
+
+    <div id="page-refill" class="page active">
+        <div class="card">
+            <div class="card-title">➕ Добавить заправку</div>
+            <div class="input-row">
+                <div class="input-group"><label>Литры</label><input type="number" id="liters" step="0.01" placeholder="45.5"></div>
+                <div class="input-group"><label>Пробег (км)</label><input type="number" id="odometer" placeholder="12345"></div>
+            </div>
+            <div class="input-group"><label>💰 Цена за литр (₽)</label><input type="number" id="price" step="0.01" placeholder="52" value="52"></div>
+            <button class="btn" id="saveRefillBtn">Сохранить заправку</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📊 Статистика</div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="totalRefills">0</div><div class="stat-label">Заправок</div></div>
+                <div class="stat-card"><div class="stat-value" id="totalLiters">0</div><div class="stat-label">Литров</div></div>
+                <div class="stat-card"><div class="stat-value" id="totalCost">0</div><div class="stat-label">💰 Затраты (₽)</div></div>
+                <div class="stat-card"><div class="stat-value" id="avgConsumption">0</div><div class="stat-label">Расход л/100км</div></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="history-header">
+                <div class="card-title" style="margin-bottom:0">📋 История заправок</div>
+                <button class="toggle-history-btn" id="toggleHistoryBtn">▼ Показать</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div id="refillsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-notes" class="page">
+        <div class="card">
+            <div class="card-title">📝 Добавить заметку</div>
+            <div class="input-group"><label>Название</label><input type="text" id="noteKey" placeholder="Масляный фильтр"></div>
+            <div class="input-group"><label>Значение</label><input type="text" id="noteValue" placeholder="1234-567890"></div>
+            <button class="btn" id="addNoteBtn">➕ Добавить заметку</button>
+        </div>
+        <div class="card">
+            <div class="card-title">📋 Мои заметки</div>
+            <div id="notesList"></div>
+        </div>
+    </div>
+
+    <div id="page-settings" class="page">
+        <div class="card">
+            <div class="card-title">🚗 Управление авто</div>
+            <div id="carsList"></div>
+            <div class="input-group"><input type="text" id="newCarName" placeholder="Название нового авто"></div>
+            <button class="btn" id="addCarBtn">Добавить автомобиль</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🛢️ Замена масла</div>
+            <div class="input-group"><label>Пробег при замене (км)</label><input type="number" id="oilOdometer" placeholder="15000"></div>
+            <div class="input-group"><label>Интервал замены (км)</label><input type="number" id="oilInterval" placeholder="10000" value="10000"></div>
+            <button class="btn" id="setOilBtn">Установить напоминание</button>
+            <div id="oilInfo" style="margin-top:12px;padding:12px;background:#f8f9fa;border-radius:12px"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💾 Данные</div>
+            <button class="btn" id="exportBtn">📤 Экспорт данных</button>
+            <div class="file-drop" id="fileDropZone">📁 Нажмите или перетащите JSON файл</div>
+            <input type="file" id="importFile" accept=".json" style="display:none">
+            <button class="btn btn-danger" id="clearBtn" style="background:#dc3545;margin-top:8px">🗑️ Очистить всё</button>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <button class="tab active" data-page="refill"><span class="tab-icon">⛽</span>Заправка</button>
+        <button class="tab" data-page="notes"><span class="tab-icon">📝</span>Заметки</button>
+        <button class="tab" data-page="settings"><span class="tab-icon">⚙️</span>Настройки</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="modal" id="editNoteModal">
+        <div class="modal-content">
+            <h3>✏️ Редактировать заметку</h3>
+            <div class="input-group"><label>Название</label><input type="text" id="editNoteKey"></div>
+            <div class="input-group"><label>Значение</label><input type="text" id="editNoteValue"></div>
+            <div class="modal-buttons">
+                <button class="btn" id="saveNoteBtn">Сохранить</button>
+                <button class="btn" id="cancelNoteBtn" style="background:#e8f0fe;color:#1a73e8">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appData = { cars: {}, currentCarId: null };
+        let editingNoteKey = null;
+        let editingNoteCarId = null;
+        
+        // ПО УМОЛЧАНИЮ ИСТОРИЯ СКРЫТА (false)
+        let historyVisible = false;
+        
+        // Загружаем состояние истории из localStorage, если оно там есть
+        const savedHistoryState = localStorage.getItem('historyVisible');
+        if (savedHistoryState !== null) {
+            historyVisible = savedHistoryState === 'true';
+        } else {
+            // Если нет сохранённого состояния, устанавливаем скрытое состояние
+            historyVisible = false;
+            localStorage.setItem('historyVisible', 'false');
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('fuelData');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch(e) { console.error(e); }
+            }
+            
+            if (Object.keys(appData.cars).length === 0) {
+                const id = 'car_' + Date.now();
+                appData.cars[id] = {
+                    id: id,
+                    name: 'Мой автомобиль',
+                    refills: [],
+                    notes: {},
+                    pricePerLiter: 52,
+                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
+                };
+                appData.currentCarId = id;
+            }
+            
+            if (!appData.currentCarId || !appData.cars[appData.currentCarId]) {
+                appData.currentCarId = Object.keys(appData.cars)[0];
+            }
+            
+            saveData();
+        }
+        
+        function saveData() {
+            localStorage.setItem('fuelData', JSON.stringify(appData));
+        }
+        
+        function getCurrentCar() {
+            return appData.cars[appData.currentCarId];
+        }
+        
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.background = isError ? '#dc3545' : '#333';
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+        
+        function addRefill(l, o, p) {
+            const car = getCurrentCar();
+            const cost = l * p;
+            car.refills.push({
+                id: Date.now(),
+                liters: parseFloat(l),
+                odometer: parseInt(o),
+                cost: cost,
+                pricePerLiter: parseFloat(p),
+                date: new Date().toISOString()
+            });
+            car.refills.sort((a, b) => b.odometer - a.odometer);
+            car.pricePerLiter = parseFloat(p);
+            saveData();
+            renderAll();
+            showToast('✅ Заправка добавлена');
+            checkOilReminder(o);
+        }
+        
+        function deleteRefill(id) {
+            if (confirm('Удалить заправку?')) {
+                const car = getCurrentCar();
+                car.refills = car.refills.filter(r => r.id !== id);
+                saveData();
+                renderAll();
+                showToast('🗑️ Заправка удалена');
+            }
+        }
+        
+        function calcConsumption() {
+            const car = getCurrentCar();
+            if (car.refills.length < 2) return null;
+            const s = [...car.refills].sort((a, b) => b.odometer - a.odometer);
+            const dist = s[0].odometer - s[1].odometer;
+            if (dist <= 0) return null;
+            return ((s[0].liters / dist) * 100).toFixed(1);
+        }
+        
+        function addNote(k, v) {
+            if (!k || !v) { showToast('❌ Заполните поля', true); return false; }
+            const car = getCurrentCar();
+            car.notes[k] = { value: v, updatedAt: new Date().toISOString() };
+            saveData();
+            renderNotes();
+            showToast('📝 Заметка добавлена');
+            return true;
+        }
+        
+        function deleteNote(k) {
+            if (confirm(`Удалить заметку "${k}"?`)) {
+                const car = getCurrentCar();
+                delete car.notes[k];
+                saveData();
+                renderNotes();
+                showToast('🗑️ Заметка удалена');
+            }
+        }
+        
+        function openEditNoteModal(k, v) {
+            editingNoteKey = k;
+            editingNoteCarId = appData.currentCarId;
+            document.getElementById('editNoteKey').value = k;
+            document.getElementById('editNoteValue').value = v;
+            document.getElementById('editNoteModal').classList.add('active');
+        }
+        
+        function saveEditedNote() {
+            const newKey = document.getElementById('editNoteKey').value.trim();
+            const newVal = document.getElementById('editNoteValue').value.trim();
+            if (!newKey || !newVal) { showToast('❌ Заполните поля', true); return; }
+            const car = appData.cars[editingNoteCarId];
+            if (!car) return;
+            if (editingNoteKey !== newKey) delete car.notes[editingNoteKey];
+            car.notes[newKey] = { value: newVal, updatedAt: new Date().toISOString() };
+            saveData();
+            document.getElementById('editNoteModal').classList.remove('active');
+            editingNoteKey = null;
+            editingNoteCarId = null;
+            renderNotes();
+            showToast('✏️ Заметка отредактирована');
+        }
+        
+        function closeNoteModal() {
+            document.getElementById('editNoteModal').classList.remove('active');
+            editingNoteKey = null;
+            editingNoteCarId = null;
+        }
+        
+        function setOilReminder(o, i) {
+            const car = getCurrentCar();
+            car.oilChange = { lastOdometer: parseInt(o), interval: parseInt(i), nextOdometer: parseInt(o) + parseInt(i) };
+            saveData();
+            renderSettings();
+            showToast('🛢️ Напоминание установлено');
+        }
+        
+        function checkOilReminder(currentKm) {
+            const car = getCurrentCar();
+            if (!car.oilChange || !car.oilChange.lastOdometer) return;
+            const remaining = car.oilChange.nextOdometer - currentKm;
+            if (remaining <= 0) {
+                showToast('⚠️ ПОРА МЕНЯТЬ МАСЛО!', true);
+            } else if (remaining <= 500) {
+                showToast(`🔔 Скоро замена масла! Осталось ${remaining} км`, true);
+            }
+        }
+        
+        function addCar(name) {
+            if (!name) { showToast('❌ Введите название', true); return; }
+            const id = 'car_' + Date.now();
+            appData.cars[id] = {
+                id: id,
+                name: name,
+                refills: [],
+                notes: {},
+                pricePerLiter: 52,
+                oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
+            };
+            appData.currentCarId = id;
+            saveData();
+            renderAll();
+            showToast(`🚗 "${name}" добавлен`);
+        }
+        
+        function switchCar(id) {
+            appData.currentCarId = id;
+            saveData();
+            renderAll();
+            // При смене авто - история остаётся скрытой
+            if (historyVisible) {
+                historyVisible = false;
+                localStorage.setItem('historyVisible', 'false');
+                const list = document.getElementById('historyList');
+                const btn = document.getElementById('toggleHistoryBtn');
+                if (list) list.classList.remove('show');
+                if (btn) btn.innerHTML = '▼ Показать';
+            }
+        }
+        
+        function deleteCar(id) {
+            if (confirm('Удалить авто?')) {
+                delete appData.cars[id];
+                if (appData.currentCarId === id) appData.currentCarId = Object.keys(appData.cars)[0];
+                saveData();
+                renderAll();
+                showToast('🚗 Удалено');
+            }
+        }
+        
+        function toggleHistory() {
+            historyVisible = !historyVisible;
+            const list = document.getElementById('historyList');
+            const btn = document.getElementById('toggleHistoryBtn');
+            if (historyVisible) {
+                list.classList.add('show');
+                btn.innerHTML = '▲ Скрыть';
+                renderRefillsList();
+            } else {
+                list.classList.remove('show');
+                btn.innerHTML = '▼ Показать';
+            }
+            localStorage.setItem('historyVisible', historyVisible);
+        }
+        
+        function exportData() {
+            const data = JSON.stringify(appData, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
+            a.click();
+            showToast('📤 Экспорт');
+        }
+        
+        function importData(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.cars) {
+                        appData.cars = { ...appData.cars, ...imported.cars };
+                        if (imported.currentCarId && appData.cars[imported.currentCarId]) {
+                            appData.currentCarId = imported.currentCarId;
+                        }
+                        saveData();
+                        renderAll();
+                        showToast('✅ Импорт выполнен');
+                        // ПОСЛЕ ИМПОРТА - ИСТОРИЯ СКРЫТАЯ
+                        historyVisible = false;
+                        localStorage.setItem('historyVisible', 'false');
+                        const list = document.getElementById('historyList');
+                        const btn = document.getElementById('toggleHistoryBtn');
+                        if (list) list.classList.remove('show');
+                        if (btn) btn.innerHTML = '▼ Показать';
+                    } else {
+                        showToast('❌ Неверный формат', true);
+                    }
+                } catch (err) {
+                    showToast('❌ Ошибка импорта', true);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function clearAll() {
+            if (confirm('⚠️ Удалить ВСЕ данные?')) {
+                const id = 'car_' + Date.now();
+                appData = { cars: {}, currentCarId: null };
+                appData.cars[id] = {
+                    id: id,
+                    name: 'Мой автомобиль',
+                    refills: [],
+                    notes: {},
+                    pricePerLiter: 52,
+                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
+                };
+                appData.currentCarId = id;
+                saveData();
+                renderAll();
+                showToast('✅ Очищено');
+                // После очистки - история скрыта
+                historyVisible = false;
+                localStorage.setItem('historyVisible', 'false');
+                const list = document.getElementById('historyList');
+                const btn = document.getElementById('toggleHistoryBtn');
+                if (list) list.classList.remove('show');
+                if (btn) btn.innerHTML = '▼ Показать';
+            }
+        }
+        
+        function renderCarSelector() {
+            const container = document.getElementById('carSelector');
+            let html = '';
+            for (const c of Object.values(appData.cars)) {
+                html += `<button class="car-btn ${c.id === appData.currentCarId ? 'active' : ''}" onclick="switchCar('${c.id}')">${c.id === appData.currentCarId ? '🔵' : '⚪'} ${c.name.substring(0, 15)}</button>`;
+            }
+            html += `<button class="car-btn add-car" onclick="document.getElementById('newCarName').focus();document.getElementById('addCarBtn').click()">➕ Новый</button>`;
+            container.innerHTML = html;
+        }
+        
+        function renderRefillsList() {
+            const container = document.getElementById('refillsList');
+            const car = getCurrentCar();
+            if (car.refills.length === 0) {
+                container.innerHTML = '<div class="empty-state">⛽ Нет заправок</div>';
+                return;
+            }
+            let html = '';
+            for (const r of car.refills.slice(0, 20)) {
+                html += `<div class="refill-item">
+                    <div>
+                        <div class="refill-date">${new Date(r.date).toLocaleDateString()}</div>
+                        <div class="refill-details">⛽ ${r.liters}л | 🛣️ ${r.odometer}км | 💰 ${r.cost.toFixed(0)}₽</div>
+                    </div>
+                    <button class="icon-btn delete" onclick="deleteRefill(${r.id})">🗑️</button>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+        
+        function renderNotes() {
+            const container = document.getElementById('notesList');
+            const car = getCurrentCar();
+            const notes = car.notes || {};
+            const entries = Object.entries(notes);
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="empty-state">📝 Нет заметок</div>';
+                return;
+            }
+            let html = '';
+            for (const [k, d] of entries) {
+                html += `<div class="note-item">
+                    <div class="note-key">📌 ${k}</div>
+                    <div class="note-value">${d.value}</div>
+                    <div class="note-actions">
+                        <button class="icon-btn edit" onclick="openEditNoteModal('${k.replace(/'/g, "\\'")}', '${d.value.replace(/'/g, "\\'")}')">✏️ Редактировать</button>
+                        <button class="icon-btn delete" onclick="deleteNote('${k.replace(/'/g, "\\'")}')">🗑️ Удалить</button>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+        
+        function renderStats() {
+            const car = getCurrentCar();
+            const totalLiters = car.refills.reduce((s, r) => s + r.liters, 0).toFixed(1);
+            const totalCost = car.refills.reduce((s, r) => s + r.cost, 0).toFixed(0);
+            document.getElementById('totalRefills').textContent = car.refills.length;
+            document.getElementById('totalLiters').textContent = totalLiters;
+            document.getElementById('totalCost').textContent = totalCost;
+            const cons = calcConsumption();
+            document.getElementById('avgConsumption').innerHTML = cons ? `${cons}<span style="font-size:11px">л/100км</span>` : '--';
+        }
+        
+        function renderCarsList() {
+            let html = '';
+            for (const c of Object.values(appData.cars)) {
+                html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee">
+                    <span>${c.id === appData.currentCarId ? '🔵' : '⚪'} ${c.name}</span>
+                    <div>
+                        ${c.id !== appData.currentCarId ? `<button class="icon-btn" onclick="switchCar('${c.id}')" style="color:#1a73e8">🔁</button>` : ''}
+                        <button class="icon-btn delete" onclick="deleteCar('${c.id}')">🗑️</button>
+                    </div>
+                </div>`;
+            }
+            document.getElementById('carsList').innerHTML = html;
+        }
+        
+        function renderSettings() {
+            renderCarsList();
+            const car = getCurrentCar();
+            const oil = car.oilChange;
+            const oilDiv = document.getElementById('oilInfo');
+            if (oil && oil.lastOdometer) {
+                const lastRefill = car.refills[0];
+                const currentKm = lastRefill?.odometer || oil.lastOdometer;
+                const remaining = oil.nextOdometer - currentKm;
+                const percent = Math.min(100, Math.max(0, (currentKm - oil.lastOdometer) / oil.interval * 100));
+                oilDiv.innerHTML = `
+                    <div>🛢️ Последняя: ${oil.lastOdometer} км</div>
+                    <div>📏 Интервал: ${oil.interval} км</div>
+                    <div>🎯 Следующая: ${oil.nextOdometer} км</div>
+                    <div>📊 Осталось: ${remaining} км</div>
+                    <div style="margin-top:8px;height:6px;background:#eee;border-radius:3px"><div style="width:${percent}%;height:6px;background:#1a73e8;border-radius:3px"></div></div>
+                `;
+            } else {
+                oilDiv.innerHTML = '<div class="empty-state">🛢️ Напоминание не установлено</div>';
+            }
+            document.getElementById('oilOdometer').value = oil?.lastOdometer || '';
+            document.getElementById('oilInterval').value = oil?.interval || 10000;
+        }
+        
+        function renderAll() {
+            renderCarSelector();
+            renderStats();
+            renderNotes();
+            renderSettings();
+            if (historyVisible) renderRefillsList();
+        }
+        
+        function init() {
+            loadData();
+            renderAll();
+            
+            // Принудительно скрываем историю при загрузке страницы
+            historyVisible = false;
+            localStorage.setItem('historyVisible', 'false');
+            const list = document.getElementById('historyList');
+            const btn = document.getElementById('toggleHistoryBtn');
+            if (list) list.classList.remove('show');
+            if (btn) btn.innerHTML = '▼ Показать';
+            
+            document.getElementById('saveRefillBtn').onclick = () => {
+                const l = document.getElementById('liters').value;
+                const o = document.getElementById('odometer').value;
+                const p = document.getElementById('price').value || getCurrentCar().pricePerLiter;
+                if (!l || !o) { showToast('❌ Заполните поля', true); return; }
+                addRefill(l, o, parseFloat(p));
+                document.getElementById('liters').value = '';
+                document.getElementById('odometer').value = '';
+            };
+            
+            document.getElementById('toggleHistoryBtn').onclick = toggleHistory;
+            
+            document.getElementById('addNoteBtn').onclick = () => {
+                const k = document.getElementById('noteKey').value.trim();
+                const v = document.getElementById('noteValue').value.trim();
+                if (addNote(k, v)) {
+                    document.getElementById('noteKey').value = '';
+                    document.getElementById('noteValue').value = '';
+                }
+            };
+            
+            document.getElementById('setOilBtn').onclick = () => {
+                const o = document.getElementById('oilOdometer').value;
+                const i = document.getElementById('oilInterval').value;
+                if (!o) { showToast('❌ Введите пробег', true); return; }
+                setOilReminder(o, i);
+            };
+            
+            document.getElementById('addCarBtn').onclick = () => {
+                const n = document.getElementById('newCarName').value.trim();
+                addCar(n);
+                document.getElementById('newCarName').value = '';
+            };
+            
+            document.getElementById('exportBtn').onclick = exportData;
+            
+            const drop = document.getElementById('fileDropZone');
+            const fileInp = document.getElementById('importFile');
+            drop.onclick = () => fileInp.click();
+            drop.ondragover = (e) => { e.preventDefault(); drop.style.borderColor = '#1a73e8'; };
+            drop.ondragleave = () => { drop.style.borderColor = '#ddd'; };
+            drop.ondrop = (e) => {
+                e.preventDefault();
+                drop.style.borderColor = '#ddd';
+                const f = e.dataTransfer.files[0];
+                if (f && f.name.endsWith('.json')) importData(f);
+                else showToast('❌ JSON файл', true);
+            };
+            fileInp.onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ''; };
+            
+            document.getElementById('clearBtn').onclick = clearAll;
+            document.getElementById('saveNoteBtn').onclick = saveEditedNote;
+            document.getElementById('cancelNoteBtn').onclick = closeNoteModal;
+            
+            document.querySelectorAll('.tab').forEach(t => {
+                t.onclick = () => {
+                    const p = t.dataset.page;
+                    document.querySelectorAll('.tab').forEach(tt => tt.classList.remove('active'));
+                    document.querySelectorAll('.page').forEach(pp => pp.classList.remove('active'));
+                    t.classList.add('active');
+                    document.getElementById(`page-${p}`).classList.add('active');
+                };
+            });
+        }
+        
+        init();
+        
+        window.switchCar = switchCar;
+        window.deleteRefill = deleteRefill;
+        window.deleteCar = deleteCar;
+        window.deleteNote = deleteNote;
+        window.openEditNoteModal = openEditNoteModal;
+    </script>
+</body>
+</html>
