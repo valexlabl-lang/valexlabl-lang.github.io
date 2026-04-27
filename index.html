@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a73e8">
     
-    <!-- Иконка для экрана Домой -->
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231a73e8'/%3E%3Ctext x='50' y='72' font-size='50' text-anchor='middle' fill='white'%3E⛽%3C/text%3E%3C/svg%3E">
     
     <title>FuelTracker</title>
@@ -72,7 +71,6 @@
         <div class="car-selector" id="carSelector"></div>
     </div>
 
-    <!-- Страница заправок -->
     <div id="page-refill" class="page active">
         <div class="card">
             <div class="card-title">➕ Добавить заправку</div>
@@ -94,7 +92,6 @@
             </div>
         </div>
 
-        <!-- Детальная статистика (скрытая) -->
         <div class="card">
             <div class="collapsible-header">
                 <div class="card-title" style="margin-bottom:0">📈 Детальная статистика</div>
@@ -105,7 +102,6 @@
             </div>
         </div>
 
-        <!-- Помесячная статистика (скрытая) -->
         <div class="card">
             <div class="collapsible-header">
                 <div class="card-title" style="margin-bottom:0">📅 Помесячная статистика</div>
@@ -116,7 +112,6 @@
             </div>
         </div>
 
-        <!-- История заправок (скрытая) -->
         <div class="card">
             <div class="collapsible-header">
                 <div class="card-title" style="margin-bottom:0">📋 История заправок</div>
@@ -128,7 +123,6 @@
         </div>
     </div>
 
-    <!-- Страница заметок -->
     <div id="page-notes" class="page">
         <div class="card">
             <div class="card-title">📝 Добавить заметку</div>
@@ -142,7 +136,6 @@
         </div>
     </div>
 
-    <!-- Страница настроек -->
     <div id="page-settings" class="page">
         <div class="card">
             <div class="card-title">🚗 Управление авто</div>
@@ -176,7 +169,6 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- Модальное окно для редактирования заметки -->
     <div class="modal" id="editNoteModal">
         <div class="modal-content">
             <h3>✏️ Редактировать заметку</h3>
@@ -190,12 +182,10 @@
     </div>
 
     <script>
-        // Данные
         let appData = { cars: {}, currentCarId: null };
         let editingNoteKey = null;
         let editingNoteCarId = null;
         
-        // Состояния скрытых блоков
         let detailedStatsVisible = localStorage.getItem('detailedStatsVisible') === 'true';
         let monthlyStatsVisible = localStorage.getItem('monthlyStatsVisible') === 'true';
         let refillsHistoryVisible = localStorage.getItem('refillsHistoryVisible') === 'true';
@@ -244,23 +234,18 @@
             setTimeout(() => { toast.style.opacity = '0'; }, 2000);
         }
         
-        // Расчет общей статистики
         function calculateOverallStats(refills) {
             if (refills.length < 2) return null;
-            
             const sorted = [...refills].sort((a, b) => a.odometer - b.odometer);
             const startKm = sorted[0].odometer;
             const endKm = sorted[sorted.length - 1].odometer;
             const totalDistance = endKm - startKm;
-            
             let totalLiters = 0, totalCost = 0;
             for (let i = 1; i < sorted.length; i++) {
                 totalLiters += sorted[i].liters;
                 totalCost += sorted[i].cost;
             }
-            
             if (totalDistance <= 0 || totalLiters <= 0) return null;
-            
             return {
                 totalDistance: totalDistance,
                 totalLiters: totalLiters.toFixed(1),
@@ -272,17 +257,13 @@
             };
         }
         
-        // Расчет помесячной статистики
         function calculateMonthlyStats(refills) {
             if (refills.length === 0) return [];
-            
             const monthly = {};
-            
             for (const refill of refills) {
                 const date = new Date(refill.date);
                 const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                 const monthName = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
-                
                 if (!monthly[monthKey]) {
                     monthly[monthKey] = {
                         monthName: monthName,
@@ -293,14 +274,12 @@
                         lastOdometer: refill.odometer
                     };
                 }
-                
                 monthly[monthKey].refills.push(refill);
                 monthly[monthKey].totalLiters += refill.liters;
                 monthly[monthKey].totalCost += refill.cost;
                 monthly[monthKey].firstOdometer = Math.min(monthly[monthKey].firstOdometer, refill.odometer);
                 monthly[monthKey].lastOdometer = Math.max(monthly[monthKey].lastOdometer, refill.odometer);
             }
-            
             const result = [];
             for (const key in monthly) {
                 const month = monthly[key];
@@ -315,21 +294,16 @@
                 }
                 result.push(month);
             }
-            
             return result.sort((a, b) => b.monthName.localeCompare(a.monthName)).slice(0, 6);
         }
         
-        // Расчет текущего расхода
         function calculateCurrentConsumption(refills) {
             if (refills.length < 2) return null;
-            
             const sorted = [...refills].sort((a, b) => b.odometer - a.odometer);
             const last = sorted[0];
             const prev = sorted[1];
             const distance = last.odometer - prev.odometer;
-            
             if (distance <= 0) return null;
-            
             return {
                 consumption: ((last.liters / distance) * 100).toFixed(1),
                 costPer100km: ((last.cost / distance) * 100).toFixed(1),
@@ -338,7 +312,6 @@
             };
         }
         
-        // Заправки
         function addRefill(l, o, p) {
             const car = getCurrentCar();
             const cost = l * p;
@@ -368,7 +341,7 @@
             }
         }
         
-        // Заметки
+        // === ЗАМЕТКИ - ГЛАВНЫЕ ФУНКЦИИ ===
         function addNote(k, v) {
             if (!k || !v) { showToast('❌ Заполните поля', true); return false; }
             const car = getCurrentCar();
@@ -419,7 +392,6 @@
             editingNoteCarId = null;
         }
         
-        // Масло
         function setOilReminder(o, i) {
             const car = getCurrentCar();
             car.oilChange = { lastOdometer: parseInt(o), interval: parseInt(i), nextOdometer: parseInt(o) + parseInt(i) };
@@ -439,7 +411,6 @@
             }
         }
         
-        // Автомобили
         function addCar(name) {
             if (!name) { showToast('❌ Введите название', true); return; }
             const id = 'car_' + Date.now();
@@ -461,8 +432,7 @@
             appData.currentCarId = id;
             saveData();
             renderAll();
-            const car = getCurrentCar();
-            document.getElementById('price').value = car.pricePerLiter;
+            document.getElementById('price').value = getCurrentCar().pricePerLiter;
         }
         
         function deleteCar(id) {
@@ -475,12 +445,10 @@
             }
         }
         
-        // Переключение блоков
         function toggleSection(sectionId, storageKey, renderFunc) {
             const content = document.getElementById(sectionId);
             const btn = document.querySelector(`.toggle-btn[data-target="${storageKey.replace('Visible', '')}"]`);
             if (!content || !btn) return;
-            
             let isVisible = content.classList.contains('show');
             if (isVisible) {
                 content.classList.remove('show');
@@ -496,11 +464,9 @@
         
         function renderDetailedStats() {
             const car = getCurrentCar();
-            const refills = car.refills;
-            const overall = calculateOverallStats(refills);
-            const current = calculateCurrentConsumption(refills);
+            const overall = calculateOverallStats(car.refills);
+            const current = calculateCurrentConsumption(car.refills);
             const container = document.getElementById('detailedStats');
-            
             if (overall) {
                 container.innerHTML = `
                     <div style="margin-bottom: 12px;">
@@ -513,7 +479,7 @@
                         📝 Заправок: ${overall.refillCount} (использовано: ${overall.effectiveRefills})
                     </div>
                     ${current ? `<div style="margin-top: 12px;">
-                        <strong>📈 Текущий расход (между последними заправками):</strong><br>
+                        <strong>📈 Текущий расход:</strong><br>
                         📊 ${current.consumption} л/100км<br>
                         💵 ${current.costPer100km} ₽/100км<br>
                         🛣️ ${current.distance} км пробега
@@ -528,7 +494,6 @@
             const car = getCurrentCar();
             const monthly = calculateMonthlyStats(car.refills);
             const container = document.getElementById('monthlyStats');
-            
             if (monthly.length > 0) {
                 container.innerHTML = monthly.map(m => `
                     <div class="month-item">
@@ -567,7 +532,7 @@
             container.innerHTML = html;
         }
         
-        // Рендер заметок с обработчиками
+        // === РЕНДЕР ЗАМЕТОК С ПРЯМЫМИ ОБРАБОТЧИКАМИ ===
         function renderNotes() {
             const container = document.getElementById('notesList');
             const car = getCurrentCar();
@@ -579,22 +544,36 @@
                 return;
             }
             
-            let html = '';
+            container.innerHTML = '';
+            
             for (const [key, data] of entries) {
-                const escapedKey = key.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                const escapedValue = data.value.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                html += `
-                    <div class="note-item">
-                        <div class="note-key">📌 ${escapeHtml(key)}</div>
-                        <div class="note-value">${escapeHtml(data.value)}</div>
-                        <div class="note-actions">
-                            <button class="icon-btn edit" onclick="openEditNoteModal('${escapedKey}', '${escapedValue}')">✏️ Редактировать</button>
-                            <button class="icon-btn delete" onclick="deleteNote('${escapedKey}')">🗑️ Удалить</button>
-                        </div>
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note-item';
+                noteDiv.innerHTML = `
+                    <div class="note-key">📌 ${escapeHtml(key)}</div>
+                    <div class="note-value">${escapeHtml(data.value)}</div>
+                    <div class="note-actions">
+                        <button class="icon-btn edit" data-key="${escapeHtml(key)}" data-value="${escapeHtml(data.value)}">✏️ Редактировать</button>
+                        <button class="icon-btn delete" data-key="${escapeHtml(key)}">🗑️ Удалить</button>
                     </div>
                 `;
+                
+                const editBtn = noteDiv.querySelector('.edit');
+                const deleteBtn = noteDiv.querySelector('.delete');
+                
+                editBtn.onclick = function() {
+                    const key = this.getAttribute('data-key');
+                    const value = this.getAttribute('data-value');
+                    openEditNoteModal(key, value);
+                };
+                
+                deleteBtn.onclick = function() {
+                    const key = this.getAttribute('data-key');
+                    deleteNote(key);
+                };
+                
+                container.appendChild(noteDiv);
             }
-            container.innerHTML = html;
         }
         
         function escapeHtml(str) {
@@ -604,23 +583,17 @@
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
                 return m;
-            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(m) {
-                return m;
             });
         }
         
         function renderStats() {
             const car = getCurrentCar();
             const refills = car.refills;
-            
-            const totalRefills = refills.length;
             const totalLiters = refills.reduce((s, r) => s + r.liters, 0).toFixed(1);
             const totalCost = refills.reduce((s, r) => s + r.cost, 0).toFixed(0);
-            
-            document.getElementById('totalRefills').textContent = totalRefills;
+            document.getElementById('totalRefills').textContent = refills.length;
             document.getElementById('totalLiters').textContent = totalLiters;
             document.getElementById('totalCost').textContent = totalCost;
-            
             const current = calculateCurrentConsumption(refills);
             if (current) {
                 document.getElementById('avgConsumption').innerHTML = `${current.consumption}<span style="font-size:11px">л/100км</span>`;
@@ -679,7 +652,6 @@
         }
         
         function restoreCollapsibleStates() {
-            // Детальная статистика
             const detailedContent = document.getElementById('detailedStatsContent');
             const detailedBtn = document.querySelector('.toggle-btn[data-target="detailedStats"]');
             if (detailedStatsVisible) {
@@ -691,7 +663,6 @@
                 if (detailedBtn) detailedBtn.innerHTML = '▼ Показать';
             }
             
-            // Помесячная статистика
             const monthlyContent = document.getElementById('monthlyStatsContent');
             const monthlyBtn = document.querySelector('.toggle-btn[data-target="monthlyStats"]');
             if (monthlyStatsVisible) {
@@ -703,7 +674,6 @@
                 if (monthlyBtn) monthlyBtn.innerHTML = '▼ Показать';
             }
             
-            // История заправок
             const historyContent = document.getElementById('refillsHistoryContent');
             const historyBtn = document.querySelector('.toggle-btn[data-target="refillsHistory"]');
             if (refillsHistoryVisible) {
@@ -717,20 +687,70 @@
         }
         
         function renderAll() {
-            const car = getCurrentCar();
-            document.getElementById('price').value = car.pricePerLiter;
             renderCarSelector();
             renderStats();
             renderNotes();
             renderSettings();
             restoreCollapsibleStates();
+            document.getElementById('price').value = getCurrentCar().pricePerLiter;
+        }
+        
+        function exportData() {
+            const data = JSON.stringify(appData, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
+            a.click();
+            showToast('📤 Экспорт выполнен');
+        }
+        
+        function importData(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.cars) {
+                        appData.cars = { ...appData.cars, ...imported.cars };
+                        if (imported.currentCarId && appData.cars[imported.currentCarId]) {
+                            appData.currentCarId = imported.currentCarId;
+                        }
+                        saveData();
+                        renderAll();
+                        showToast('✅ Импорт выполнен');
+                    } else {
+                        showToast('❌ Неверный формат', true);
+                    }
+                } catch (err) {
+                    showToast('❌ Ошибка импорта', true);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function clearAll() {
+            if (confirm('⚠️ Удалить ВСЕ данные?')) {
+                const id = 'car_' + Date.now();
+                appData = { cars: {}, currentCarId: null };
+                appData.cars[id] = {
+                    id: id,
+                    name: 'Мой автомобиль',
+                    refills: [],
+                    notes: {},
+                    pricePerLiter: 52,
+                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
+                };
+                appData.currentCarId = id;
+                saveData();
+                renderAll();
+                showToast('✅ Все данные очищены');
+            }
         }
         
         function init() {
             loadData();
             renderAll();
             
-            // Обработчики кнопок переключения
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.onclick = () => {
                     const target = btn.getAttribute('data-target');
@@ -810,62 +830,8 @@
             });
         }
         
-        // Экспорт/Импорт
-        function exportData() {
-            const data = JSON.stringify(appData, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
-            a.click();
-            showToast('📤 Экспорт выполнен');
-        }
-        
-        function importData(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.cars) {
-                        appData.cars = { ...appData.cars, ...imported.cars };
-                        if (imported.currentCarId && appData.cars[imported.currentCarId]) {
-                            appData.currentCarId = imported.currentCarId;
-                        }
-                        saveData();
-                        renderAll();
-                        showToast('✅ Импорт выполнен');
-                    } else {
-                        showToast('❌ Неверный формат', true);
-                    }
-                } catch (err) {
-                    showToast('❌ Ошибка импорта', true);
-                }
-            };
-            reader.readAsText(file);
-        }
-        
-        function clearAll() {
-            if (confirm('⚠️ Удалить ВСЕ данные?')) {
-                const id = 'car_' + Date.now();
-                appData = { cars: {}, currentCarId: null };
-                appData.cars[id] = {
-                    id: id,
-                    name: 'Мой автомобиль',
-                    refills: [],
-                    notes: {},
-                    pricePerLiter: 52,
-                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
-                };
-                appData.currentCarId = id;
-                saveData();
-                renderAll();
-                showToast('✅ Все данные очищены');
-            }
-        }
-        
         init();
         
-        // Глобальные функции для onclick
         window.switchCar = switchCar;
         window.deleteRefill = deleteRefill;
         window.deleteCar = deleteCar;
