@@ -36,9 +36,9 @@
         .refill-date{font-size:11px;color:#666}
         .refill-details{font-weight:500}
         .note-item{background:#f8f9fa;border-radius:12px;padding:12px;margin-bottom:8px}
-        .note-key{font-weight:600;color:#1a73e8;margin-bottom:4px}
-        .note-value{font-size:14px;color:#333;margin-bottom:8px}
-        .note-actions{display:flex;gap:8px}
+        .note-key{font-weight:600;color:#1a73e8;margin-bottom:4px;font-size:16px}
+        .note-value{font-size:14px;color:#333;margin-bottom:8px;word-break:break-all}
+        .note-actions{display:flex;gap:8px;margin-top:8px}
         .empty-state{text-align:center;padding:40px;color:#666}
         .icon-btn{background:none;border:none;font-size:18px;padding:8px;cursor:pointer;border-radius:8px}
         .icon-btn.edit{color:#1a73e8}
@@ -196,14 +196,9 @@
         let editingNoteCarId = null;
         
         // Состояния скрытых блоков
-        let detailedStatsVisible = false;
-        let monthlyStatsVisible = false;
-        let refillsHistoryVisible = false;
-        
-        // Загружаем состояния
-        if (localStorage.getItem('detailedStatsVisible') === 'true') detailedStatsVisible = true;
-        if (localStorage.getItem('monthlyStatsVisible') === 'true') monthlyStatsVisible = true;
-        if (localStorage.getItem('refillsHistoryVisible') === 'true') refillsHistoryVisible = true;
+        let detailedStatsVisible = localStorage.getItem('detailedStatsVisible') === 'true';
+        let monthlyStatsVisible = localStorage.getItem('monthlyStatsVisible') === 'true';
+        let refillsHistoryVisible = localStorage.getItem('refillsHistoryVisible') === 'true';
 
         function loadData() {
             const saved = localStorage.getItem('fuelData');
@@ -384,21 +379,21 @@
             return true;
         }
         
-        function deleteNote(k) {
-            if (confirm(`Удалить заметку "${k}"?`)) {
+        function deleteNote(key) {
+            if (confirm(`Удалить заметку "${key}"?`)) {
                 const car = getCurrentCar();
-                delete car.notes[k];
+                delete car.notes[key];
                 saveData();
                 renderNotes();
                 showToast('🗑️ Заметка удалена');
             }
         }
         
-        function openEditNoteModal(k, v) {
-            editingNoteKey = k;
+        function openEditNoteModal(key, value) {
+            editingNoteKey = key;
             editingNoteCarId = appData.currentCarId;
-            document.getElementById('editNoteKey').value = k;
-            document.getElementById('editNoteValue').value = v;
+            document.getElementById('editNoteKey').value = key;
+            document.getElementById('editNoteValue').value = value;
             document.getElementById('editNoteModal').classList.add('active');
         }
         
@@ -481,9 +476,9 @@
         }
         
         // Переключение блоков
-        function toggleSection(sectionId, storageKey) {
+        function toggleSection(sectionId, storageKey, renderFunc) {
             const content = document.getElementById(sectionId);
-            const btn = document.querySelector(`.toggle-btn[data-target="${sectionId.replace('Content', '')}"]`);
+            const btn = document.querySelector(`.toggle-btn[data-target="${storageKey.replace('Visible', '')}"]`);
             if (!content || !btn) return;
             
             let isVisible = content.classList.contains('show');
@@ -495,10 +490,7 @@
                 content.classList.add('show');
                 btn.innerHTML = '▲ Скрыть';
                 localStorage.setItem(storageKey, 'true');
-                // Обновляем содержимое при открытии
-                if (sectionId === 'detailedStatsContent') renderDetailedStats();
-                if (sectionId === 'monthlyStatsContent') renderMonthlyStats();
-                if (sectionId === 'refillsHistoryContent') renderRefillsList();
+                if (renderFunc) renderFunc();
             }
         }
         
@@ -555,70 +547,6 @@
             }
         }
         
-        // Экспорт/Импорт
-        function exportData() {
-            const data = JSON.stringify(appData, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
-            a.click();
-            showToast('📤 Экспорт выполнен');
-        }
-        
-        function importData(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.cars) {
-                        appData.cars = { ...appData.cars, ...imported.cars };
-                        if (imported.currentCarId && appData.cars[imported.currentCarId]) {
-                            appData.currentCarId = imported.currentCarId;
-                        }
-                        saveData();
-                        renderAll();
-                        showToast('✅ Импорт выполнен');
-                    } else {
-                        showToast('❌ Неверный формат', true);
-                    }
-                } catch (err) {
-                    showToast('❌ Ошибка импорта', true);
-                }
-            };
-            reader.readAsText(file);
-        }
-        
-        function clearAll() {
-            if (confirm('⚠️ Удалить ВСЕ данные?')) {
-                const id = 'car_' + Date.now();
-                appData = { cars: {}, currentCarId: null };
-                appData.cars[id] = {
-                    id: id,
-                    name: 'Мой автомобиль',
-                    refills: [],
-                    notes: {},
-                    pricePerLiter: 52,
-                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
-                };
-                appData.currentCarId = id;
-                saveData();
-                renderAll();
-                showToast('✅ Все данные очищены');
-            }
-        }
-        
-        // Рендер
-        function renderCarSelector() {
-            const container = document.getElementById('carSelector');
-            let html = '';
-            for (const c of Object.values(appData.cars)) {
-                html += `<button class="car-btn ${c.id === appData.currentCarId ? 'active' : ''}" onclick="switchCar('${c.id}')">${c.id === appData.currentCarId ? '🔵' : '⚪'} ${c.name.substring(0, 15)}</button>`;
-            }
-            html += `<button class="car-btn add-car" onclick="document.getElementById('newCarName').focus();document.getElementById('addCarBtn').click()">➕ Новый</button>`;
-            container.innerHTML = html;
-        }
-        
         function renderRefillsList() {
             const container = document.getElementById('refillsList');
             const car = getCurrentCar();
@@ -639,27 +567,46 @@
             container.innerHTML = html;
         }
         
+        // Рендер заметок с обработчиками
         function renderNotes() {
             const container = document.getElementById('notesList');
             const car = getCurrentCar();
             const notes = car.notes || {};
             const entries = Object.entries(notes);
+            
             if (entries.length === 0) {
-                container.innerHTML = '<div class="empty-state">📝 Нет заметок</div>';
+                container.innerHTML = '<div class="empty-state">📝 Нет заметок<br>Добавьте первую заметку</div>';
                 return;
             }
+            
             let html = '';
-            for (const [k, d] of entries) {
-                html += `<div class="note-item">
-                    <div class="note-key">📌 ${k}</div>
-                    <div class="note-value">${d.value}</div>
-                    <div class="note-actions">
-                        <button class="icon-btn edit" onclick="openEditNoteModal('${k.replace(/'/g, "\\'")}', '${d.value.replace(/'/g, "\\'")}')">✏️ Редактировать</button>
-                        <button class="icon-btn delete" onclick="deleteNote('${k.replace(/'/g, "\\'")}')">🗑️ Удалить</button>
+            for (const [key, data] of entries) {
+                const escapedKey = key.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const escapedValue = data.value.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                html += `
+                    <div class="note-item">
+                        <div class="note-key">📌 ${escapeHtml(key)}</div>
+                        <div class="note-value">${escapeHtml(data.value)}</div>
+                        <div class="note-actions">
+                            <button class="icon-btn edit" onclick="openEditNoteModal('${escapedKey}', '${escapedValue}')">✏️ Редактировать</button>
+                            <button class="icon-btn delete" onclick="deleteNote('${escapedKey}')">🗑️ Удалить</button>
+                        </div>
                     </div>
-                </div>`;
+                `;
             }
             container.innerHTML = html;
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(m) {
+                return m;
+            });
         }
         
         function renderStats() {
@@ -680,6 +627,16 @@
             } else {
                 document.getElementById('avgConsumption').innerHTML = '--';
             }
+        }
+        
+        function renderCarSelector() {
+            const container = document.getElementById('carSelector');
+            let html = '';
+            for (const c of Object.values(appData.cars)) {
+                html += `<button class="car-btn ${c.id === appData.currentCarId ? 'active' : ''}" onclick="switchCar('${c.id}')">${c.id === appData.currentCarId ? '🔵' : '⚪'} ${c.name.substring(0, 15)}</button>`;
+            }
+            html += `<button class="car-btn add-car" onclick="document.getElementById('newCarName').focus();document.getElementById('addCarBtn').click()">➕ Новый</button>`;
+            container.innerHTML = html;
         }
         
         function renderCarsList() {
@@ -778,17 +735,14 @@
                 btn.onclick = () => {
                     const target = btn.getAttribute('data-target');
                     if (target === 'detailedStats') {
-                        toggleSection('detailedStatsContent', 'detailedStatsVisible');
+                        toggleSection('detailedStatsContent', 'detailedStatsVisible', renderDetailedStats);
                         detailedStatsVisible = !detailedStatsVisible;
-                        if (detailedStatsVisible && !document.getElementById('detailedStats').innerHTML) renderDetailedStats();
                     } else if (target === 'monthlyStats') {
-                        toggleSection('monthlyStatsContent', 'monthlyStatsVisible');
+                        toggleSection('monthlyStatsContent', 'monthlyStatsVisible', renderMonthlyStats);
                         monthlyStatsVisible = !monthlyStatsVisible;
-                        if (monthlyStatsVisible && !document.getElementById('monthlyStats').innerHTML) renderMonthlyStats();
                     } else if (target === 'refillsHistory') {
-                        toggleSection('refillsHistoryContent', 'refillsHistoryVisible');
+                        toggleSection('refillsHistoryContent', 'refillsHistoryVisible', renderRefillsList);
                         refillsHistoryVisible = !refillsHistoryVisible;
-                        if (refillsHistoryVisible && !document.getElementById('refillsList').innerHTML) renderRefillsList();
                     }
                 };
             });
@@ -856,8 +810,62 @@
             });
         }
         
+        // Экспорт/Импорт
+        function exportData() {
+            const data = JSON.stringify(appData, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `fuel_data_${new Date().toISOString().slice(0, 19)}.json`;
+            a.click();
+            showToast('📤 Экспорт выполнен');
+        }
+        
+        function importData(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.cars) {
+                        appData.cars = { ...appData.cars, ...imported.cars };
+                        if (imported.currentCarId && appData.cars[imported.currentCarId]) {
+                            appData.currentCarId = imported.currentCarId;
+                        }
+                        saveData();
+                        renderAll();
+                        showToast('✅ Импорт выполнен');
+                    } else {
+                        showToast('❌ Неверный формат', true);
+                    }
+                } catch (err) {
+                    showToast('❌ Ошибка импорта', true);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function clearAll() {
+            if (confirm('⚠️ Удалить ВСЕ данные?')) {
+                const id = 'car_' + Date.now();
+                appData = { cars: {}, currentCarId: null };
+                appData.cars[id] = {
+                    id: id,
+                    name: 'Мой автомобиль',
+                    refills: [],
+                    notes: {},
+                    pricePerLiter: 52,
+                    oilChange: { lastOdometer: null, interval: 10000, nextOdometer: null }
+                };
+                appData.currentCarId = id;
+                saveData();
+                renderAll();
+                showToast('✅ Все данные очищены');
+            }
+        }
+        
         init();
         
+        // Глобальные функции для onclick
         window.switchCar = switchCar;
         window.deleteRefill = deleteRefill;
         window.deleteCar = deleteCar;
