@@ -273,6 +273,7 @@
                 const monthName = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
                 if (!monthly[monthKey]) {
                     monthly[monthKey] = {
+                        monthKey: monthKey,
                         monthName: monthName,
                         refills: [],
                         totalLiters: 0,
@@ -301,7 +302,8 @@
                 }
                 result.push(month);
             }
-            return result.sort((a, b) => b.monthName.localeCompare(a.monthName)).slice(0, 6);
+            // Сортировка от новых месяцев к старым по monthKey (YYYY-MM)
+            return result.sort((a, b) => b.monthKey.localeCompare(a.monthKey)).slice(0, 6);
         }
         
         function calculateCurrentConsumption(refills) {
