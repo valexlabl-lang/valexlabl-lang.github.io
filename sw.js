@@ -1,9 +1,10 @@
 // Service Worker для автообновления PWA
-const CACHE_NAME = 'fuel-tracker-v1';
+const CACHE_NAME = 'fuel-tracker-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon-180.png',
   '/icon-192.png',
   '/icon-512.png'
 ];
