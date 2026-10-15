@@ -26,7 +26,7 @@ textarea{resize:vertical;min-height:70px}
 .two>*,.f{min-width:0}
 input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;width:100%;min-height:46px;text-align:left;display:block}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
-#top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(56px + env(safe-area-inset-top)) 14px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+#top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(27px + env(safe-area-inset-top)) 14px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
 .carsel{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;max-width:70%}
 .carsel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--card2);color:var(--mut)}
@@ -1077,6 +1077,18 @@ function makeIcon() {
     window.__show && window.__show("Старт: " + (e && e.stack || e));
   }
 })();
+</script>
+<script>
+/* Проверка обновлений: при открытии подтягивает свежую версию страницы и один раз перезагружает, если она изменилась */
+(function(){try{
+ if(!window.fetch||location.protocol.indexOf('http')!==0)return;
+ function hs(t){var h=5381,i=t.length;while(i)h=(h*33)^t.charCodeAt(--i);return (h>>>0).toString(36)+':'+t.length}
+ fetch(location.pathname,{cache:'reload'}).then(function(r){return r.ok?r.text():null}).then(function(t){
+  if(!t)return;var h=hs(t),old=null;
+  try{old=localStorage.getItem('cd_ver');localStorage.setItem('cd_ver',h)}catch(e){return}
+  if(old&&old!==h&&!sessionStorage.getItem('cd_rl')){sessionStorage.setItem('cd_rl','1');location.reload()}
+ }).catch(function(){});
+}catch(e){}})();
 </script>
 </body>
 </html>
