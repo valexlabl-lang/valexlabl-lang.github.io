@@ -1279,9 +1279,28 @@ function loadJsQR(){return new Promise(function(res,rej){
  sc.onload=function(){window.jsQR?res(window.jsQR):rej(new Error('Библиотека QR не загрузилась'))};
  sc.onerror=function(){rej(new Error('Библиотека QR не загрузилась, нужен интернет'))};
  document.head.appendChild(sc)})}
+function qrScan(jsQR,src,sw,sh,mx,ac,pad,inv){
+ var k=Math.min(1,mx/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k)),p=pad?Math.round(Math.max(w,h)*0.1):0;
+ var c=qrScan.c||(qrScan.c=document.createElement('canvas'));c.width=w+2*p;c.height=h+2*p;
+ var x=c.getContext('2d',{willReadFrequently:true});
+ x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(src,p,p,w,h);
+ var d=x.getImageData(0,0,c.width,c.height),a=d.data,n=c.width*c.height,i;
+ if(ac){
+  var L=new Uint8Array(n),H=new Array(256).fill(0);
+  for(i=0;i<n;i++){var v=(a[i*4]*77+a[i*4+1]*150+a[i*4+2]*29)>>8;L[i]=v;H[v]++}
+  var lo=0,hi=255,t=n*0.02,acc=0;
+  for(i=0;i<256;i++){acc+=H[i];if(acc>=t){lo=i;break}}
+  acc=0;for(i=255;i>=0;i--){acc+=H[i];if(acc>=t){hi=i;break}}
+  if(hi-lo<20){lo=0;hi=255}
+  var sc=255/(hi-lo);
+  for(i=0;i<n;i++){var y=(L[i]-lo)*sc;y=y<0?0:y>255?255:y;a[i*4]=a[i*4+1]=a[i*4+2]=y;a[i*4+3]=255}
+ }
+ var r=jsQR(a,c.width,c.height,{inversionAttempts:inv?'attemptBoth':'dontInvert'});
+ return r&&r.data?r.data:null;
+}
 function openQrScanner(onRaw){
  var ov=document.createElement('div');ov.className='ov';ov.style.zIndex=70;ov.style.alignItems='center';
- ov.innerHTML='<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Скан QR чека</b><button class="x" type="button" id="qrX">✕</button></div><div class="shb"><video id="qrV" playsinline muted style="width:100%;border-radius:14px;background:#000;min-height:200px;max-height:46vh;object-fit:cover"></video><div class="mut sm" id="qrMsg" style="margin:8px 0 12px">Наведите камеру на QR-код на чеке</div><label class="btn sec full">🖼️ Выбрать фото чека<input id="qrF" type="file" accept="image/*" hidden></label></div></div>';
+ ov.innerHTML='<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Скан QR чека</b><button class="x" type="button" id="qrX">✕</button></div><div class="shb"><video id="qrV" playsinline muted style="width:100%;border-radius:14px;background:#000;min-height:200px;max-height:46vh;object-fit:cover"></video><div class="mut sm" id="qrMsg" style="margin:8px 0 12px">Наведите камеру на QR-код на чеке. Держите 15–25 см, дождитесь резкости, чек лучше расправить.</div><label class="btn sec full">🖼️ Выбрать фото чека<input id="qrF" type="file" accept="image/*" hidden></label></div></div>';
  document.body.appendChild(ov);
  var v=ov.querySelector('#qrV'),msg=ov.querySelector('#qrMsg'),f=ov.querySelector('#qrF'),stream=null,stop=false;
  function close(){stop=true;try{stream&&stream.getTracks().forEach(function(t){t.stop()})}catch(e){}ov.remove()}
@@ -1289,18 +1308,23 @@ function openQrScanner(onRaw){
  ov.addEventListener('click',function(e){if(e.target===ov)close()});
  loadJsQR().then(function(jsQR){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg.textContent='Камера недоступна. Выберите фото чека ниже.';return}
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false}).then(function(s){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){
    if(stop){s.getTracks().forEach(function(t){t.stop()});return}
    stream=s;v.srcObject=s;var pl=v.play();if(pl&&pl.catch)pl.catch(function(){});
-   var cv=document.createElement('canvas'),cx=cv.getContext('2d'),last=0;
+   var last=0,pn=0,busy=false,PS=[[1600,0],[1100,1],[900,0],[1600,1],[1300,0]],bd=null,tr=s.getVideoTracks&&s.getVideoTracks()[0];
+   try{if(window.BarcodeDetector)bd=new BarcodeDetector({formats:['qr_code']})}catch(e){bd=null}
+   try{var caps=tr&&tr.getCapabilities?tr.getCapabilities():{};
+    if(caps.focusMode&&caps.focusMode.indexOf('continuous')>=0)tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){});
+    if(caps.torch){var tb=document.createElement('button');tb.type='button';tb.className='btn sec full';tb.style.marginBottom='10px';tb.textContent='🔦 Фонарик';var on=false;
+     tb.onclick=function(){on=!on;tr.applyConstraints({advanced:[{torch:on}]}).catch(function(){})};msg.parentNode.insertBefore(tb,msg.nextSibling)}}catch(e){}
    (function tick(ts){
     if(stop)return;
-    if(v.readyState>=2&&v.videoWidth&&ts-last>120){
-     last=ts;var k=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight));
-     cv.width=Math.round(v.videoWidth*k);cv.height=Math.round(v.videoHeight*k);
-     cx.drawImage(v,0,0,cv.width,cv.height);
-     var d=cx.getImageData(0,0,cv.width,cv.height),r=jsQR(d.data,cv.width,cv.height,{inversionAttempts:'dontInvert'});
-     if(r&&r.data){close();onRaw(r.data);return}
+    if(v.readyState>=2&&v.videoWidth&&ts-last>140&&!busy){
+     last=ts;var found=null;
+     if(bd){busy=true;bd.detect(v).then(function(r){busy=false;if(r&&r[0]&&r[0].rawValue&&!stop){close();onRaw(r[0].rawValue)}}).catch(function(){busy=false;bd=null})}
+     var ps=PS[pn++%PS.length];
+     try{found=qrScan(jsQR,v,v.videoWidth,v.videoHeight,ps[0],ps[1],false,false)}catch(e){}
+     if(found&&!stop){close();onRaw(found);return}
     }
     requestAnimationFrame(tick)})(0);
   }).catch(function(e){msg.textContent=(e&&e.name==='NotAllowedError')?'Нет доступа к камере. Разрешите в Настройки → Safari → Камера или выберите фото чека ниже.':'Камера недоступна. Выберите фото чека ниже.'});
@@ -1310,15 +1334,14 @@ function openQrScanner(onRaw){
   loadJsQR().then(function(jsQR){
    var url=URL.createObjectURL(file),im=new Image();
    im.onload=function(){
-    var found=null;
-    [1600,1000,2400,600].some(function(mx){
-     var k=Math.min(1,mx/Math.max(im.width,im.height)),c=document.createElement('canvas');
-     c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
-     var x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);
-     var d=x.getImageData(0,0,c.width,c.height),r=jsQR(d.data,c.width,c.height,{inversionAttempts:'attemptBoth'});
-     if(r&&r.data){found=r.data;return true}return false});
-    URL.revokeObjectURL(url);
-    if(found){close();onRaw(found)}else msg.textContent='QR не найден на фото. Сфотографируйте ближе и ровнее.'};
+    var PP=[[1600,0,0],[1600,1,0],[1000,0,0],[1000,1,0],[2400,0,0],[2400,1,1],[700,1,0],[3200,0,0],[1600,1,1]],pi=0;
+    function step(){
+     var found=null;
+     try{found=qrScan(jsQR,im,im.width,im.height,PP[pi][0],PP[pi][1],PP[pi][2],true)}catch(e){}
+     if(found){URL.revokeObjectURL(url);close();onRaw(found);return}
+     if(++pi<PP.length){msg.textContent='Читаю фото… '+pi+'/'+PP.length;setTimeout(step,30)}
+     else{URL.revokeObjectURL(url);msg.textContent='QR не найден на фото. Снимите ближе и резче: QR должен занимать хотя бы четверть кадра, чек расправьте.'}}
+    step();};
    im.onerror=function(){msg.textContent='Не удалось открыть фото'};
    im.src=url;
   }).catch(function(e){msg.textContent=e.message});
