@@ -70,6 +70,13 @@ nav button{flex:1;padding:9px 0 8px;font-size:11px;color:var(--mut);display:flex
 nav button i{font-style:normal;font-size:22px}
 nav button{position:relative}
 nav button.on{color:var(--acc);font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal>span{font-size:12px;color:var(--mut);padding:2px 0}
+.cd{position:relative;height:42px;border-radius:12px;font-size:15px;font-weight:500;display:grid;place-items:center;background:var(--card2)}
+.cd i{position:absolute;bottom:5px;left:50%;margin-left:-3px;width:6px;height:6px;border-radius:50%}
+.cd.tod{box-shadow:inset 0 0 0 2px var(--acc)}
+.cd.sel{background:var(--acc);color:#fff}
+.dt{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 8px}
 .bdg{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;font-style:normal;line-height:1}
 .fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:32px;box-shadow:var(--sh);z-index:25;display:grid;place-items:center;line-height:1}
 .ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fi .15s}
@@ -466,14 +473,14 @@ function welcome() {
   return `<div class="empty" style="padding-top:60px"><b>🚗</b><h2 style="color:var(--txt);margin:6px 0">Дневник вашего авто</h2><p>Добавьте машину — и записывайте замены расходников, ремонты, заправки и расходы. Всё хранится на телефоне.</p><div style="display:grid;gap:10px;margin-top:20px"><button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button><label class="btn sec full">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label><button class="btn sec full" data-a="demo">✨ Посмотреть на демо-данных</button></div></div>`;
 }
 function home() {
-  const car = curCar(), m = stats(car, 30), y = stats(car, 365), al = alerts(car), rs = carRecs(car.id).slice(0, 5), segs = fuelSegs(car.id);
+  const car = curCar(), m = stats(car, periodRange("month")), y = stats(car, periodRange("year")), al = alerts(car), rs = carRecs(car.id).slice(0, 5), segs = fuelSegs(car.id);
   const lb = S.settings.lastBackup, needBk = S.records.length >= 3 && (!lb || daysDiff(lb, today()) > 30);
   return `<div class="card hero"><div class="row"><div class="av">${car.photo ? `<img src="${car.photo}">` : "🚗"}</div><div class="grow"><h2>${esc(car.name)}</h2><div class="sub">${esc([car.make, car.year, car.plate].filter(Boolean).join(" · ")) || "&nbsp;"}</div></div></div>
  <div class="odo">${nf0.format(car.odo || 0)}<small>км</small><span class="grow"></span><button class="btn glass" data-a="odo">Обновить</button></div></div>
  ${needBk ? `<button class="card alert" style="width:100%" data-a="tab" data-v="more"><span style="font-size:22px">💾</span><div><b>Сделайте резервную копию</b><div class="mut sm">${lb ? `Последняя — ${fmtDate(lb)}` : "Копий ещё не было"}. Данные лежат только в памяти телефона.</div></div></button>` : ""}
  ${al.length ? `<h3>Требует внимания</h3>` + al.slice(0, 4).map((a) => `<button class="card alert ${a.lvl}" data-a="${a.act}" data-id="${a.id}"><span style="font-size:22px">${a.lvl === "over" ? "🔴" : "🟠"}</span><div><b>${esc(a.t)}</b><div class="mut sm">${esc(a.s)}</div></div></button>`).join("") + (al.length > 4 ? `<button class="sm" style="color:var(--acc);margin:0 4px 10px" data-a="tab" data-v="service">Ещё ${al.length - 4} →</button>` : "") : ""}
  <div class="grid4" style="margin-top:12px">${[["fuel", "⛽", "Заправка"], ["service", "🔧", "Замена"], ["repair", "🛠️", "Ремонт"], ["other", "➕", "Другое"]].map((q) => `<button class="qa" data-a="addRec" data-t="${q[0]}"><i>${q[1]}</i>${q[2]}</button>`).join("")}</div>
- <div class="tiles"><div class="tile"><div class="l">За 30 дней</div><div class="v">${money(m.total)}</div><div class="s">за год ${money(y.total)}</div></div>
+ <div class="tiles"><div class="tile"><div class="l">За ${MONTH_L[(/* @__PURE__ */ new Date()).getMonth()]}</div><div class="v">${money(m.total)}</div><div class="s">с начала года ${money(y.total)}</div></div>
  <div class="tile"><div class="l">Расход топлива</div><div class="v">${segs.length ? nf1.format(stats(car, 0).l100) + " л" : "—"}</div><div class="s">на 100 км, в среднем</div></div></div>
  <h3>Последние записи <button data-a="tab" data-v="history">Все →</button></h3>
  <div class="card" style="padding:4px 14px">${rs.length ? rs.map((r) => recRow(r)).join("") : `<div class="empty"><b>📝</b>Записей пока нет. Нажмите «+»</div>`}</div>`;
@@ -522,9 +529,47 @@ function remCard(s) {
  ${s.nextOdo != null || s.nextDate ? `<div class="sm mut">Следующий: ${[s.nextOdo != null ? km(s.nextOdo) : null, s.nextDate ? fmtDate(s.nextDate) : null].filter(Boolean).join(" или ")}${s.est ? ` · по вашему темпу ≈ ${fmtDate(s.est)}` : ""}</div>` : ""}
  <div class="flex" style="margin-top:10px"><button class="btn sec grow" data-a="addRec" data-t="service" data-item="${esc(r.title)}">✅ Заменил</button><button class="btn sec" data-a="remEdit" data-id="${r.id}">✏️</button></div></div>`;
 }
+const MONTH_L = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+function calEvents() {
+  const ev = [];
+  S.cars.forEach((c) => {
+    remList(c).forEach((st) => {
+      const date = st.nextDate || st.est;
+      if (date) ev.push({ date, t: st.r.title, car: c.name, lvl: st.level, s: dueText(st) + (!st.nextDate ? " · дата примерная" : ""), act: "remEdit", id: st.r.id, kind: "🔧" });
+    });
+    S.docs.filter((d) => d.carId === c.id).forEach((d) => {
+      const ds = docStatus(d);
+      ev.push({ date: d.expires, t: d.title, car: c.name, lvl: ds.level, s: ds.left < 0 ? "истёк " + fmtDate(d.expires) : "действует до " + fmtDate(d.expires), act: "docEdit", id: d.id, kind: "📄" });
+    });
+  });
+  return ev;
+}
+function calCard() {
+  const td = today(), ym = ui.calM || td.slice(0, 7), y = +ym.slice(0, 4), mo = +ym.slice(5, 7), ev = calEvents();
+  const dim = new Date(y, mo, 0).getDate(), off = (new Date(y, mo - 1, 1).getDay() + 6) % 7, byDay = {};
+  ev.forEach((e) => {
+    if (e.date.slice(0, 7) === ym) (byDay[e.date] = byDay[e.date] || []).push(e);
+  });
+  const col = { over: "var(--bad)", soon: "var(--warn)", ok: "var(--ok)", none: "var(--mut)" };
+  let cells = "";
+  for (let i = 0; i < off; i++) cells += "<span></span>";
+  for (let d = 1; d <= dim; d++) {
+    const ds = ym + "-" + pad(d), es = byDay[ds] || [], sel = ui.calSel === ds, isT = ds === td;
+    const worst = es.length ? es.map((e) => e.lvl).sort((a, b) => lvlRank[a] - lvlRank[b])[0] : null;
+    cells += `<button class="cd ${sel ? "sel" : ""} ${isT ? "tod" : ""}" data-a="calDay" data-d="${ds}">${d}${worst ? `<i style="background:${col[worst]}"></i>` : ""}</button>`;
+  }
+  const sel = ui.calSel && ui.calSel.slice(0, 7) === ym ? byDay[ui.calSel] || [] : null;
+  const list = sel ? sel.length ? sel.map((e) => `<button class="rec" data-a="${e.act}" data-id="${e.id}"><div class="ic" style="background:var(--card2)">${e.kind}</div><div class="m"><div class="t">${esc(e.t)}</div><div class="s">${esc(e.car)} · ${esc(e.s)}</div></div></button>`).join("") : '<div class="sm mut" style="padding:8px 0">На эту дату ничего не запланировано</div>' : '<div class="sm mut" style="padding:8px 0">Нажмите на дату, чтобы увидеть, что на неё приходится</div>';
+  const monthEv = Object.keys(byDay).length;
+  return `<div class="card"><div class="flex between" style="margin-bottom:8px"><button class="btn sec" data-a="calNav" data-dir="-1" style="padding:8px 14px">‹</button><b style="text-transform:capitalize">${MONTH_L[mo - 1]} ${y}</b><button class="btn sec" data-a="calNav" data-dir="1" style="padding:8px 14px">›</button></div>
+ <div class="cal"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>${cells}</div>
+ <div class="sm mut" style="margin:8px 0 2px"><i class="dt" style="background:var(--bad)"></i> просрочено <i class="dt" style="background:var(--warn)"></i> скоро <i class="dt" style="background:var(--ok)"></i> в норме${ym !== td.slice(0, 7) ? ' · <button style="color:var(--acc)" data-a="calNav" data-dir="0">к сегодня</button>' : ""}</div>
+ <div style="margin-top:6px">${list}</div></div>`;
+}
 function service() {
   const car = curCar(), rl = remList(car), docs = S.docs.filter((d) => d.carId === car.id).sort((a, b) => a.expires.localeCompare(b.expires));
-  return `<h3>Расходники и интервалы <button data-a="remAdd">+ Добавить</button></h3>
+  return `<h3>Календарь сроков</h3>${calCard()}
+ <h3>Расходники и интервалы <button data-a="remAdd">+ Добавить</button></h3>
  ${rl.length ? rl.map(remCard).join("") : `<div class="card empty"><b>🔔</b>Задайте интервалы замены (масло, фильтры, ГРМ…) — приложение покажет, что и когда менять.<div style="margin-top:12px;display:grid;gap:8px"><button class="btn" data-a="remDefaults">Добавить стандартный набор</button><button class="btn sec" data-a="remAdd">Добавить свой</button></div></div>`}
  <h3>Документы и сроки <button data-a="docAdd">+ Добавить</button></h3>
  ${docs.length ? docs.map((d) => {
@@ -1768,6 +1813,22 @@ const A = {
     scrollTo(0, 0);
   },
   addRec: (d) => recForm(null, { type: d.t, item: d.item }),
+  calNav: (d) => {
+    const td = today(), cur0 = ui.calM || td.slice(0, 7);
+    if (+d.dir === 0) {
+      ui.calM = td.slice(0, 7);
+      ui.calSel = td;
+    } else {
+      const dt = new Date(+cur0.slice(0, 4), +cur0.slice(5, 7) - 1 + +d.dir, 1);
+      ui.calM = dt.getFullYear() + "-" + pad(dt.getMonth() + 1);
+      ui.calSel = null;
+    }
+    render();
+  },
+  calDay: (d) => {
+    ui.calSel = ui.calSel === d.d ? null : d.d;
+    render();
+  },
   tripToggle: () => {
     ui.tripOpen = !ui.tripOpen;
     render();
