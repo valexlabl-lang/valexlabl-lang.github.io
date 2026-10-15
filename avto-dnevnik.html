@@ -387,6 +387,7 @@ function render() {
   const views = { home, history, service, stats: statsView, more };
   $("#view").innerHTML = !car && ui.view !== "more" ? welcome() : views[ui.view]();
   if (ui.view === "history") bindHist();
+  if (ui.view === "stats") tripCalc();
 }
 function welcome() {
   return `<div class="empty" style="padding-top:60px"><b>🚗</b><h2 style="color:var(--txt);margin:6px 0">Дневник вашего авто</h2><p>Добавьте машину — и записывайте замены расходников, ремонты, заправки и расходы. Всё хранится на телефоне.</p><div style="display:grid;gap:10px;margin-top:20px"><button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button><label class="btn sec full">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label><button class="btn sec full" data-a="demo">✨ Посмотреть на демо-данных</button></div></div>`;
@@ -497,6 +498,36 @@ function chartLine(pts, fmt, color) {
 function stats_() {
   return "";
 }
+function tripBase(st, all) {
+  const l = st.l100 != null ? st.l100 : all.l100, p = st.ppl != null ? st.ppl : all.ppl;
+  return { l, p };
+}
+function tripCalc() {
+  const inp = $("#tripKm");
+  if (!inp) return;
+  const car = curCar(), b = tripBase(stats(car, ui.period || 0), stats(car, 0));
+  const k = parseFloat(String(inp.value).replace(",", ".")) || 0;
+  ui.tripKm = inp.value;
+  const o = $("#tripOut");
+  if (!o) return;
+  if (b.l == null || b.p == null) {
+    o.innerHTML = '<span class="mut sm">Нужны две полные заправки с пробегом и ценой</span>';
+    return;
+  }
+  const lit = k * b.l / 100;
+  o.innerHTML = `<div class="kv"><span>Топлива потребуется</span><b>${nf1.format(lit)} л</b></div><div class="kv"><span>Стоимость поездки</span><b>${money(lit * b.p)}</b></div>`;
+}
+function tripCard(car, st, all) {
+  const b = tripBase(st, all);
+  const per100 = b.l != null && b.p != null ? b.l * b.p : null;
+  const km0 = ui.tripKm != null ? ui.tripKm : "500";
+  return `<h3>Бензин и поездка</h3><div class="card"><div class="kv"><span>Бензин на 100 км</span><b>${per100 != null ? money(per100) : "—"}</b></div>
+ <div class="kv"><span>Бензин на 1 км</span><b>${per100 != null ? nf2.format(per100 / 100) + " " + cur() : "—"}</b></div>
+ <div class="f" style="margin-top:10px"><label>Сколько км проехать?</label><input id="tripKm" type="text" inputmode="decimal" value="${esc(String(km0))}"></div>
+ <div id="tripOut" style="margin-top:6px"></div>
+ <div class="sm mut" style="margin-top:8px">${b.l != null && b.p != null ? "Считаю по среднему расходу " + nf1.format(b.l) + " л/100 км и средней цене " + nf1.format(b.p) + " " + cur() + "/л за выбранный период." : ""}</div></div>
+`;
+}
 function statsView() {
   const car = curCar(), st = stats(car, ui.period || 0), all = stats(car, 0), segs = fuelSegs(car.id);
   const cats = Object.entries(st.byCat).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]);
@@ -505,6 +536,7 @@ function statsView() {
  <div class="tiles"><div class="tile"><div class="l">Всего потрачено</div><div class="v">${money(st.total)}</div></div><div class="tile"><div class="l">Без топлива</div><div class="v">${money(st.total - st.fuelCost)}</div></div>
  <div class="tile"><div class="l">Пробег за период</div><div class="v">${st.dist != null ? nf0.format(st.dist) : "—"}</div><div class="s">км по записям</div></div><div class="tile"><div class="l">Стоимость 1 км</div><div class="v">${st.perKm != null ? nf1.format(st.perKm) + " " + cur() : "—"}</div></div>
  <div class="tile"><div class="l">Средний расход</div><div class="v">${st.l100 != null ? nf1.format(st.l100) : "—"}</div><div class="s">л / 100 км</div></div><div class="tile"><div class="l">Цена литра (ср.)</div><div class="v">${st.ppl != null ? nf1.format(st.ppl) : "—"}</div><div class="s">${cur()} / л</div></div></div>
+ ${tripCard(car, st, all)}
  <h3>Расходы по месяцам</h3><div class="card">${chartMonths(car)}<div class="legend">${Object.entries(CATS).map(([k, c]) => `<span><i style="background:${c.c}"></i>${c.n}</span>`).join("")}</div></div>
  <h3>На что уходят деньги</h3><div class="card">${cats.length ? cats.map(([k, v]) => `<div class="hbar"><div class="top"><span>${CATS[k].i} ${CATS[k].n}</span><b>${money(v)} <span class="mut sm">${Math.round(v / st.total * 100)}%</span></b></div><div class="b"><div style="width:${v / cats[0][1] * 100}%;background:${CATS[k].c}"></div></div></div>`).join("") : '<div class="empty" style="padding:12px">Нет данных за период</div>'}</div>
  <h3>Расход топлива, л/100 км</h3><div class="card">${chartLine(segs.slice(-20).map((s) => ({ y: s.l100 })), (v) => nf1.format(v), "#ffb02e")}</div>
@@ -1155,6 +1187,9 @@ document.addEventListener("click", (e) => {
     e.preventDefault();
     f(el.dataset, el);
   }
+});
+document.addEventListener("input", (e) => {
+  if (e.target && e.target.id === "tripKm") tripCalc();
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
