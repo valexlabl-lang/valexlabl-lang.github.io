@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Дневник авто">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1116">
+<title>Дневник авто</title>
+<link rel="apple-touch-icon" id="touchIcon" href="">
+<style>
+:root{--bg:#0e1116;--card:#171b22;--card2:#1f252e;--txt:#eef2f7;--mut:#8b96a5;--line:#273040;--acc:#4f8cff;--acc2:#7a5cff;--ok:#34c759;--warn:#ffb02e;--bad:#ff5a5f;--sh:0 8px 30px rgba(0,0,0,.35)}
+html[data-theme=light]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}
+@media(prefers-color-scheme:light){html[data-theme=auto]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+#app{max-width:600px;margin:0 auto}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+input,select,textarea{font:inherit;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%;outline:none;font-size:16px}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;min-height:70px}
+#top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--bg);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.carsel{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;max-width:70%}
+.carsel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--card2);color:var(--mut)}
+.pill.ok{background:rgba(52,199,89,.15);color:var(--ok)}.pill.soon{background:rgba(255,176,46,.16);color:var(--warn)}.pill.over{background:rgba(255,90,95,.16);color:var(--bad)}
+main{padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.hero{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0;box-shadow:var(--sh);position:relative;overflow:hidden}
+.hero .av{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:30px;overflow:hidden;flex:none}
+.hero .av img{width:100%;height:100%;object-fit:cover}
+.hero .row{display:flex;gap:12px;align-items:center}
+.hero h2{margin:0;font-size:20px}.hero .sub{opacity:.85;font-size:14px}
+.odo{font-size:34px;font-weight:800;letter-spacing:-.5px;margin-top:12px;display:flex;align-items:baseline;gap:8px}
+.odo small{font-size:15px;font-weight:600;opacity:.85}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600}
+.btn.sec{background:var(--card2);color:var(--txt)}.btn.red{background:rgba(255,90,95,.15);color:var(--bad)}.btn.glass{background:rgba(255,255,255,.22);color:#fff;padding:7px 12px;font-size:14px}
+.btn.full{width:100%}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.qa{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 4px;text-align:center;font-size:12px;font-weight:600}
+.qa i{display:block;font-style:normal;font-size:24px;margin-bottom:4px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.tile .l{color:var(--mut);font-size:12px}.tile .v{font-size:21px;font-weight:700;margin-top:2px}.tile .s{color:var(--mut);font-size:12px}
+h3{margin:18px 2px 8px;font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+h3 button{color:var(--acc);text-transform:none;letter-spacing:0;font-size:14px}
+.rec{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.rec:last-child{border-bottom:0}
+.ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:none}
+.rec .m{flex:1;min-width:0}.rec .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rec .s{color:var(--mut);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec .c{font-weight:700;white-space:nowrap}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.chip{padding:8px 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);white-space:nowrap;font-size:14px;font-weight:500}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.bar{height:8px;border-radius:9px;background:var(--card2);overflow:hidden;margin:8px 0}
+.bar>div{height:100%;border-radius:9px;background:var(--ok)}
+.bar.soon>div{background:var(--warn)}.bar.over>div{background:var(--bad)}
+.mut{color:var(--mut)}.sm{font-size:13px}
+.flex{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}.grow{flex:1}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;background:var(--card);background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav>div{display:flex;width:100%;max-width:600px}
+nav button{flex:1;padding:9px 0 8px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:22px}
+nav button.on{color:var(--acc);font-weight:700}
+.fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:32px;box-shadow:var(--sh);z-index:25;display:grid;place-items:center;line-height:1}
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fi .15s}
+@keyframes fi{from{opacity:0}}@keyframes su{from{transform:translateY(40px);opacity:.6}}
+.sh{background:var(--bg);width:100%;max-width:600px;max-height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:su .2s}
+.shh{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 10px;font-size:18px}
+.x{width:32px;height:32px;border-radius:50%;background:var(--card2);color:var(--mut)}
+.shb{overflow-y:auto;padding:4px 16px calc(24px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.f{margin-bottom:12px}.f label{display:block;font-size:13px;color:var(--mut);margin-bottom:5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.cats button{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:9px 4px;font-size:12px;font-weight:600;text-align:center}
+.cats button i{display:block;font-style:normal;font-size:22px}
+.cats button.on{border-color:var(--acc);background:var(--card2);background:color-mix(in srgb,var(--acc) 14%,var(--card))}
+.sw{display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--card2);border-radius:12px;border:1px solid var(--line)}
+.sw input{width:22px;height:22px;flex:none}
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222c;color:#fff;backdrop-filter:blur(10px);padding:10px 18px;border-radius:99px;z-index:99;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:90%;text-align:center}
+#toast.on{opacity:1}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.empty b{display:block;font-size:44px;margin-bottom:6px}
+.photo{width:100%;border-radius:14px;margin:8px 0;display:block}
+.thumb{width:72px;height:72px;border-radius:12px;object-fit:cover}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);gap:12px}.kv:last-child{border:0}.kv span:first-child{color:var(--mut)}.kv span:last-child{text-align:right}
+.alert{border-left:4px solid var(--warn);display:flex;gap:10px;align-items:center;width:100%;text-align:left}
+.alert.over{border-left-color:var(--bad)}
+svg text{fill:var(--mut);font-size:9px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mut);margin-top:8px}.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+.hbar{margin:8px 0}.hbar .top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px}
+.hbar .b{height:8px;border-radius:8px;background:var(--card2);overflow:hidden}.hbar .b>div{height:100%;border-radius:8px}
+#print{display:none}
+@media print{body{background:#fff;color:#000;padding:0}#app,nav,.fab,#toast,.ov{display:none!important}#print{display:block;color:#000;font-size:12px}#print table{width:100%;border-collapse:collapse}#print td,#print th{border:1px solid #bbb;padding:4px 6px;text-align:left}#print h1,#print h2{margin:10px 0 6px}}
+</style>
+<script>
+(function(){function show(m){try{var d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:999;background:#5a1515;color:#fff;padding:10px;border-radius:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:50vh;overflow:auto';document.body.appendChild(d)}d.textContent+=m+'\n'}catch(e){}}
+window.__show=show;
+setTimeout(function(){if(!window.__boot)show('Скрипт приложения не запустился: в этом просмотрщике JS заблокирован или не поддерживается. Откройте файл через Safari.');else if(!window.__ready)show('Приложение зависло при запуске.')},3500);
+window.addEventListener('error',function(e){show('Ошибка: '+e.message+' (строка '+e.lineno+')')});
+window.addEventListener('unhandledrejection',function(e){show('Ошибка: '+(e.reason&&e.reason.message||e.reason))});
+})();
+</script>
+</head>
+<body>
+<div id="app"><header id="top"></header><main id="view"><div style="padding:70px 20px;text-align:center;color:#8b96a5;font-size:15px">Загрузка…<noscript><br>Включите JavaScript в браузере</noscript></div></main></div>
+<button class="fab" id="fab" data-a="addRec" data-t="service" aria-label="Добавить запись">+</button>
+<nav><div id="tabs"></div></nav>
+<div id="toast"></div>
+<div id="print"></div>
+
+<script>"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+window.__boot = 1;
+const CATS = {
+  service: { n: "Расходники / ТО", i: "🔧", c: "#4f8cff" },
+  repair: { n: "Ремонт", i: "🛠️", c: "#ff6b6b" },
+  fuel: { n: "Заправка", i: "⛽", c: "#ffb02e" },
+  tires: { n: "Шины / колёса", i: "🛞", c: "#9b6bff" },
+  wash: { n: "Мойка / уход", i: "🧼", c: "#2ec4b6" },
+  docs: { n: "Страховка / налоги", i: "📄", c: "#7bd36b" },
+  fine: { n: "Штрафы", i: "🚫", c: "#e0567a" },
+  parts: { n: "Запчасти / тюнинг", i: "🧩", c: "#f08a4b" },
+  other: { n: "Другое", i: "📝", c: "#8b98a9" }
+};
+const PRESETS = {
+  service: ["Масло двигателя", "Масляный фильтр", "Воздушный фильтр", "Салонный фильтр", "Топливный фильтр", "Свечи зажигания", "Тормозные колодки передние", "Тормозные колодки задние", "Тормозные диски", "Тормозная жидкость", "Антифриз", "Масло КПП", "Масло в раздатке/редукторе", "Ремень / цепь ГРМ", "Ремень навесного", "Аккумулятор", "Щётки стеклоочистителя", "Жидкость ГУР", "Лампы", "Диагностика"],
+  tires: ["Шиномонтаж сезонный", "Балансировка", "Замена шин", "Ремонт прокола", "Развал-схождение"],
+  repair: ["Подвеска", "Двигатель", "Коробка передач", "Электрика", "Кузовной ремонт", "Выхлопная система", "Кондиционер"],
+  wash: ["Мойка", "Химчистка", "Полировка", "Керамика / воск"],
+  docs: ["ОСАГО", "КАСКО", "Транспортный налог", "Техосмотр / диагностическая карта"],
+  parts: [],
+  other: []
+};
+const DEFAULT_REM = [
+  ["Масло двигателя", 1e4, 12],
+  ["Масляный фильтр", 1e4, 12],
+  ["Воздушный фильтр", 15e3, 12],
+  ["Салонный фильтр", 15e3, 12],
+  ["Топливный фильтр", 3e4, 24],
+  ["Свечи зажигания", 3e4, 36],
+  ["Тормозные колодки передние", 4e4, 0],
+  ["Тормозная жидкость", 0, 24],
+  ["Антифриз", 0, 60],
+  ["Масло КПП", 6e4, 48],
+  ["Ремень / цепь ГРМ", 9e4, 60],
+  ["Аккумулятор", 0, 48],
+  ["Щётки стеклоочистителя", 0, 12],
+  ["Шиномонтаж сезонный", 0, 6]
+];
+const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const MS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const $ = (s, e = document) => e.querySelector(s), $$ = (s, e = document) => [...e.querySelectorAll(s)];
+const esc = (s) => String(s != null ? s : "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const today = () => iso(/* @__PURE__ */ new Date());
+const D = (s) => /* @__PURE__ */ new Date(s + "T00:00:00");
+const fmtDate = (s) => s ? s.slice(8, 10) + "." + s.slice(5, 7) + "." + s.slice(0, 4) : "—";
+const daysDiff = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+const addMonths = (s, m) => {
+  const d = D(s);
+  d.setMonth(d.getMonth() + m);
+  return iso(d);
+};
+const nf0 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }), nf1 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }), nf2 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
+const cur = () => S.settings.currency || "₽";
+const money = (n) => nf0.format(Math.round(n || 0)) + " " + cur();
+const km = (n) => n == null || isNaN(n) ? "—" : nf0.format(n) + " км";
+const pn = (v) => {
+  const x = parseFloat(String(v != null ? v : "").replace(",", ".").replace(/\s/g, ""));
+  return isNaN(x) ? null : x;
+};
+const norm = (s) => String(s || "").trim().toLowerCase().replace(/ё/g, "е");
+const plural = (n, a, b, c) => {
+  n = Math.abs(n) % 100;
+  const m = n % 10;
+  return n > 10 && n < 20 ? c : m > 1 && m < 5 ? b : m === 1 ? a : c;
+};
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("car-diary", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(k) {
+  const d = await idb();
+  return new Promise((res, rej) => {
+    const q = d.transaction("kv").objectStore("kv").get(k);
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error);
+  });
+}
+async function idbSet(k, v) {
+  const d = await idb();
+  return new Promise((res, rej) => {
+    const t = d.transaction("kv", "readwrite");
+    t.objectStore("kv").put(v, k);
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  });
+}
+const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], active: null });
+let S = blank(), saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    S.savedAt = Date.now();
+    let ok = false;
+    try {
+      await withTimeout(idbSet("state", JSON.parse(JSON.stringify(S))), 4e3);
+      ok = true;
+    } catch (e) {
+    }
+    try {
+      localStorage.setItem("cd_state", JSON.stringify(S));
+      ok = true;
+    } catch (e) {
+    }
+    if (!ok) toast("⚠️ Не удалось сохранить — сделайте экспорт!");
+  }, 120);
+}
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise(function(_, rej) {
+    setTimeout(function() {
+      rej(new Error("timeout"));
+    }, ms);
+  })]);
+}
+async function load() {
+  let a = null, b = null;
+  try {
+    a = JSON.parse(localStorage.getItem("cd_state") || "null");
+  } catch (e) {
+  }
+  try {
+    b = await withTimeout(idbGet("state"), 1500);
+  } catch (e) {
+  }
+  const ok = (x) => x && Array.isArray(x.cars);
+  const d = ok(a) && ok(b) ? (a.savedAt || 0) > (b.savedAt || 0) ? a : b : ok(b) ? b : ok(a) ? a : null;
+  if (d) {
+    S = Object.assign(blank(), d);
+    S.settings = Object.assign(blank().settings, d.settings || {});
+  }
+  try {
+    navigator.storage && navigator.storage.persist && navigator.storage.persist();
+  } catch (e) {
+  }
+}
+const ui = { view: "home", q: "", cat: "all", period: 365 };
+const curCar = () => S.cars.find((c) => c.id === S.active) || S.cars[0] || null;
+const carRecs = (id) => S.records.filter((r) => r.carId === id).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0));
+function applyTheme() {
+  document.documentElement.dataset.theme = S.settings.theme || "auto";
+}
+let tT;
+function toast(m) {
+  const t = $("#toast");
+  t.textContent = m;
+  t.classList.add("on");
+  clearTimeout(tT);
+  tT = setTimeout(() => t.classList.remove("on"), 2400);
+}
+function fuelSegs(carId) {
+  const fr = S.records.filter((r) => r.carId === carId && r.type === "fuel" && r.odo != null && r.liters > 0).sort((a, b) => a.odo - b.odo || a.date.localeCompare(b.date));
+  let last = null, acc = 0;
+  const segs = [];
+  for (const r of fr) {
+    if (last !== null) acc += r.liters;
+    if (r.full) {
+      if (last !== null && r.odo > last) {
+        const d = r.odo - last;
+        segs.push({ rid: r.id, date: r.date, odo: r.odo, km: d, l: acc, l100: acc / d * 100 });
+      }
+      last = r.odo;
+      acc = 0;
+    }
+  }
+  return segs;
+}
+function stats(car, days) {
+  const cutoff = days ? iso(new Date(Date.now() - days * 864e5)) : "0000-00-00";
+  const rs = S.records.filter((r) => r.carId === car.id && r.date >= cutoff);
+  const total = rs.reduce((s, r) => s + (r.cost || 0), 0);
+  const byCat = {};
+  rs.forEach((r) => byCat[r.type] = (byCat[r.type] || 0) + (r.cost || 0));
+  const odos = rs.map((r) => r.odo).filter((x) => x != null);
+  const dist = odos.length > 1 ? Math.max(...odos) - Math.min(...odos) : null;
+  const segs = fuelSegs(car.id).filter((s) => s.date >= cutoff);
+  const sk = segs.reduce((s, x) => s + x.km, 0), sl = segs.reduce((s, x) => s + x.l, 0);
+  const fl = rs.filter((r) => r.type === "fuel" && r.liters > 0 && r.cost > 0);
+  const ppl = fl.length ? fl.reduce((s, r) => s + r.cost, 0) / fl.reduce((s, r) => s + r.liters, 0) : null;
+  return { rs, total, byCat, dist, l100: sk ? sl / sk * 100 : null, ppl, perKm: dist && dist > 0 ? total / dist : null, fuelCost: byCat.fuel || 0 };
+}
+function kmPerDay(car) {
+  const pts = S.records.filter((r) => r.carId === car.id && r.odo != null).map((r) => ({ d: r.date, o: r.odo })).sort((a2, b2) => a2.d.localeCompare(b2.d));
+  if (pts.length < 2) return null;
+  const a = pts[0], b = pts[pts.length - 1], days = daysDiff(a.d, b.d);
+  if (days < 30 || b.o <= a.o) return null;
+  return (b.o - a.o) / days;
+}
+function remStatus(car, r) {
+  var _a;
+  const key = norm(r.title);
+  const recs = S.records.filter((x) => x.carId === car.id && (x.items || []).some((i) => norm(i) === key)).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0));
+  const last = recs[0];
+  const lastDate = last ? last.date : r.baseDate || null, lastOdo = last ? last.odo : (_a = r.baseOdo) != null ? _a : null;
+  const out = { r, lastDate, lastOdo, fromHistory: !!last, level: "none", leftKm: null, leftDays: null, nextOdo: null, nextDate: null, pct: 0, est: null };
+  if (r.km && lastOdo != null) {
+    out.nextOdo = lastOdo + r.km;
+    out.leftKm = out.nextOdo - (car.odo || 0);
+    out.pct = Math.max(out.pct, ((car.odo || 0) - lastOdo) / r.km);
+  }
+  if (r.months && lastDate) {
+    out.nextDate = addMonths(lastDate, r.months);
+    out.leftDays = daysDiff(today(), out.nextDate);
+    const tot = daysDiff(lastDate, out.nextDate);
+    out.pct = Math.max(out.pct, tot > 0 ? daysDiff(lastDate, today()) / tot : 0);
+  }
+  if (out.leftKm == null && out.leftDays == null) return out;
+  const kd = kmPerDay(car);
+  if (out.leftKm != null && kd && out.leftKm > 0) out.est = iso(new Date(Date.now() + out.leftKm / kd * 864e5));
+  const over = out.leftKm != null && out.leftKm < 0 || out.leftDays != null && out.leftDays < 0;
+  const soon = out.leftKm != null && out.leftKm <= Math.max(500, r.km * 0.1) || out.leftDays != null && out.leftDays <= 30;
+  out.level = over ? "over" : soon ? "soon" : "ok";
+  return out;
+}
+const lvlRank = { over: 0, soon: 1, ok: 2, none: 3 };
+function remList(car) {
+  return S.reminders.filter((r) => r.carId === car.id).map((r) => remStatus(car, r)).sort((a, b) => {
+    var _a, _b;
+    return lvlRank[a.level] - lvlRank[b.level] || ((_a = a.leftKm) != null ? _a : 1e9) - ((_b = b.leftKm) != null ? _b : 1e9);
+  });
+}
+function dueText(s) {
+  const p = [];
+  if (s.leftKm != null) p.push(s.leftKm < 0 ? `просрочено на ${km(-s.leftKm)}` : `ещё ${km(s.leftKm)}`);
+  if (s.leftDays != null) p.push(s.leftDays < 0 ? `просрочено на ${-s.leftDays} ${plural(-s.leftDays, "день", "дня", "дней")}` : s.leftDays === 0 ? "срок сегодня" : `через ${s.leftDays} ${plural(s.leftDays, "день", "дня", "дней")}`);
+  return p.join(" · ") || "нет данных";
+}
+function docStatus(d) {
+  const left = daysDiff(today(), d.expires);
+  return { left, level: left < 0 ? "over" : left <= 30 ? "soon" : "ok" };
+}
+function alerts(car) {
+  const a = [];
+  remList(car).filter((s) => s.level === "over" || s.level === "soon").forEach((s) => a.push({ lvl: s.level, t: s.r.title, s: dueText(s), act: "remEdit", id: s.r.id }));
+  S.docs.filter((d) => d.carId === car.id).forEach((d) => {
+    const st = docStatus(d);
+    if (st.level !== "ok") a.push({ lvl: st.level, t: d.title, s: st.left < 0 ? `истёк ${fmtDate(d.expires)}` : `до ${fmtDate(d.expires)} (${st.left} дн.)`, act: "docEdit", id: d.id });
+  });
+  return a.sort((x, y) => (x.lvl === "over" ? 0 : 1) - (y.lvl === "over" ? 0 : 1));
+}
+function render() {
+  applyTheme();
+  const car = curCar();
+  const tabs = [["home", "🏠", "Главная"], ["history", "📋", "История"], ["service", "🔔", "Сервис"], ["stats", "📊", "Статистика"], ["more", "⚙️", "Ещё"]];
+  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}</button>`).join("");
+  $("#fab").style.display = car && (ui.view === "home" || ui.view === "history") ? "grid" : "none";
+  $("#top").innerHTML = car ? `<button class="carsel" data-a="cars"><span>🚗 ${esc(car.name)}</span> <small class="mut">▾</small></button><span class="pill">${km(car.odo)}</span>` : `<b style="font-size:18px">🚗 Дневник авто</b>`;
+  const views = { home, history, service, stats: statsView, more };
+  $("#view").innerHTML = !car && ui.view !== "more" ? welcome() : views[ui.view]();
+  if (ui.view === "history") bindHist();
+}
+function welcome() {
+  return `<div class="empty" style="padding-top:60px"><b>🚗</b><h2 style="color:var(--txt);margin:6px 0">Дневник вашего авто</h2><p>Добавьте машину — и записывайте замены расходников, ремонты, заправки и расходы. Всё хранится на телефоне.</p><div style="display:grid;gap:10px;margin-top:20px"><button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button><label class="btn sec full">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label><button class="btn sec full" data-a="demo">✨ Посмотреть на демо-данных</button></div></div>`;
+}
+function home() {
+  const car = curCar(), m = stats(car, 30), y = stats(car, 365), al = alerts(car), rs = carRecs(car.id).slice(0, 5), segs = fuelSegs(car.id);
+  const lb = S.settings.lastBackup, needBk = S.records.length >= 3 && (!lb || daysDiff(lb, today()) > 30);
+  return `<div class="card hero"><div class="row"><div class="av">${car.photo ? `<img src="${car.photo}">` : "🚗"}</div><div class="grow"><h2>${esc(car.name)}</h2><div class="sub">${esc([car.make, car.year, car.plate].filter(Boolean).join(" · ")) || "&nbsp;"}</div></div></div>
+ <div class="odo">${nf0.format(car.odo || 0)}<small>км</small><span class="grow"></span><button class="btn glass" data-a="odo">Обновить</button></div></div>
+ ${needBk ? `<button class="card alert" style="width:100%" data-a="tab" data-v="more"><span style="font-size:22px">💾</span><div><b>Сделайте резервную копию</b><div class="mut sm">${lb ? `Последняя — ${fmtDate(lb)}` : "Копий ещё не было"}. Данные лежат только в памяти телефона.</div></div></button>` : ""}
+ ${al.length ? `<h3>Требует внимания</h3>` + al.slice(0, 4).map((a) => `<button class="card alert ${a.lvl}" data-a="${a.act}" data-id="${a.id}"><span style="font-size:22px">${a.lvl === "over" ? "🔴" : "🟠"}</span><div><b>${esc(a.t)}</b><div class="mut sm">${esc(a.s)}</div></div></button>`).join("") + (al.length > 4 ? `<button class="sm" style="color:var(--acc);margin:0 4px 10px" data-a="tab" data-v="service">Ещё ${al.length - 4} →</button>` : "") : ""}
+ <div class="grid4" style="margin-top:12px">${[["fuel", "⛽", "Заправка"], ["service", "🔧", "Замена"], ["repair", "🛠️", "Ремонт"], ["other", "➕", "Другое"]].map((q) => `<button class="qa" data-a="addRec" data-t="${q[0]}"><i>${q[1]}</i>${q[2]}</button>`).join("")}</div>
+ <div class="tiles"><div class="tile"><div class="l">За 30 дней</div><div class="v">${money(m.total)}</div><div class="s">за год ${money(y.total)}</div></div>
+ <div class="tile"><div class="l">Расход топлива</div><div class="v">${segs.length ? nf1.format(stats(car, 0).l100) + " л" : "—"}</div><div class="s">на 100 км, в среднем</div></div></div>
+ <h3>Последние записи <button data-a="tab" data-v="history">Все →</button></h3>
+ <div class="card" style="padding:4px 14px">${rs.length ? rs.map((r) => recRow(r)).join("") : `<div class="empty"><b>📝</b>Записей пока нет. Нажмите «+»</div>`}</div>`;
+}
+function recTitle(r) {
+  return r.type === "fuel" ? `Заправка${r.liters ? " · " + nf1.format(r.liters) + " л" : ""}` : r.title || CATS[r.type].n;
+}
+function recRow(r, segMap) {
+  const c = CATS[r.type] || CATS.other, sg = segMap && segMap[r.id];
+  const sub = [fmtDate(r.date), r.odo != null ? km(r.odo) : null, r.type === "fuel" && r.liters && r.cost ? nf1.format(r.cost / r.liters) + " " + cur() + "/л" : null, sg ? nf1.format(sg.l100) + " л/100" : null, r.place].filter(Boolean).join(" · ");
+  return `<button class="rec" data-a="recOpen" data-id="${r.id}"><div class="ic" style="background:${c.c}26">${c.i}</div><div class="m"><div class="t">${esc(recTitle(r))}</div><div class="s">${esc(sub)}</div></div><div class="c">${r.cost ? money(r.cost) : ""}</div></button>`;
+}
+function history() {
+  const car = curCar();
+  return `<div class="f"><input id="q" type="search" placeholder="🔍 Поиск: масло, колодки, сервис…" value="${esc(ui.q)}"></div>
+ <div class="chips"><button class="chip ${ui.cat === "all" ? "on" : ""}" data-a="cat" data-c="all">Все</button>${Object.entries(CATS).map(([k, c]) => `<button class="chip ${ui.cat === k ? "on" : ""}" data-a="cat" data-c="${k}">${c.i} ${c.n}</button>`).join("")}</div>
+ <div id="hl">${histList(car)}</div>`;
+}
+function histList(car) {
+  const q = norm(ui.q);
+  const segMap = {};
+  fuelSegs(car.id).forEach((s) => segMap[s.rid] = s);
+  const rs = carRecs(car.id).filter((r) => (ui.cat === "all" || r.type === ui.cat) && (!q || norm([r.title, r.notes, r.place, (r.items || []).join(" "), CATS[r.type].n].join(" ")).includes(q)));
+  if (!rs.length) return `<div class="empty"><b>🔍</b>Ничего не найдено</div>`;
+  const g = {};
+  rs.forEach((r) => (g[r.date.slice(0, 7)] = g[r.date.slice(0, 7)] || []).push(r));
+  return Object.keys(g).sort().reverse().map((k) => {
+    const t = g[k].reduce((s, r) => s + (r.cost || 0), 0);
+    return `<h3>${MONTHS[+k.slice(5) - 1]} ${k.slice(0, 4)}<span>${money(t)}</span></h3><div class="card" style="padding:4px 14px">${g[k].map((r) => recRow(r, segMap)).join("")}</div>`;
+  }).join("");
+}
+function bindHist() {
+  const q = $("#q");
+  if (q) q.oninput = () => {
+    ui.q = q.value;
+    $("#hl").innerHTML = histList(curCar());
+  };
+}
+function remCard(s) {
+  const r = s.r, w = Math.min(100, Math.round(s.pct * 100));
+  const lbl = { over: "Просрочено", soon: "Скоро", ok: "В норме", none: "Нет данных" }[s.level];
+  return `<div class="card"><div class="flex between"><button class="grow" style="text-align:left" data-a="remEdit" data-id="${r.id}"><b>${esc(r.title)}</b></button><span class="pill ${s.level === "over" ? "over" : s.level}">${lbl}</span></div>
+ ${s.level !== "none" ? `<div class="bar ${s.level}"><div style="width:${w}%"></div></div>` : ""}
+ <div class="sm">${esc(dueText(s))}</div>
+ <div class="sm mut" style="margin-top:4px">Интервал: ${[r.km ? km(r.km) : null, r.months ? r.months + " мес." : null].filter(Boolean).join(" / ") || "—"}${s.lastDate || s.lastOdo != null ? ` · Последний раз: ${s.lastDate ? fmtDate(s.lastDate) : ""} ${s.lastOdo != null ? km(s.lastOdo) : ""}` : ""}</div>
+ ${s.nextOdo != null || s.nextDate ? `<div class="sm mut">Следующий: ${[s.nextOdo != null ? km(s.nextOdo) : null, s.nextDate ? fmtDate(s.nextDate) : null].filter(Boolean).join(" или ")}${s.est ? ` · по вашему темпу ≈ ${fmtDate(s.est)}` : ""}</div>` : ""}
+ <div class="flex" style="margin-top:10px"><button class="btn sec grow" data-a="addRec" data-t="service" data-item="${esc(r.title)}">✅ Заменил</button><button class="btn sec" data-a="remEdit" data-id="${r.id}">✏️</button></div></div>`;
+}
+function service() {
+  const car = curCar(), rl = remList(car), docs = S.docs.filter((d) => d.carId === car.id).sort((a, b) => a.expires.localeCompare(b.expires));
+  return `<h3>Расходники и интервалы <button data-a="remAdd">+ Добавить</button></h3>
+ ${rl.length ? rl.map(remCard).join("") : `<div class="card empty"><b>🔔</b>Задайте интервалы замены (масло, фильтры, ГРМ…) — приложение покажет, что и когда менять.<div style="margin-top:12px;display:grid;gap:8px"><button class="btn" data-a="remDefaults">Добавить стандартный набор</button><button class="btn sec" data-a="remAdd">Добавить свой</button></div></div>`}
+ <h3>Документы и сроки <button data-a="docAdd">+ Добавить</button></h3>
+ ${docs.length ? docs.map((d) => {
+    const st = docStatus(d);
+    return `<button class="card flex between" style="width:100%;text-align:left" data-a="docEdit" data-id="${d.id}"><div><b>${esc(d.title)}</b><div class="mut sm">до ${fmtDate(d.expires)}</div></div><span class="pill ${st.level}">${st.left < 0 ? "истёк" : st.left + " дн."}</span></button>`;
+  }).join("") : `<div class="card empty" style="padding:18px">ОСАГО, техосмотр, права, страховка — добавьте срок, и он появится в напоминаниях.</div>`}`;
+}
+function chartMonths(car) {
+  const now = /* @__PURE__ */ new Date(), ms = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    ms.push(d.getFullYear() + "-" + pad(d.getMonth() + 1));
+  }
+  const data = ms.map((k) => {
+    const o = {};
+    S.records.filter((r) => r.carId === car.id && r.date.slice(0, 7) === k).forEach((r) => o[r.type] = (o[r.type] || 0) + (r.cost || 0));
+    return o;
+  });
+  const tot = data.map((o) => Object.values(o).reduce((a, b) => a + b, 0)), mx = Math.max(1, ...tot);
+  const W = 340, H = 170, bw = 17, gap = (W - 30 - 12 * bw) / 11;
+  let s = "";
+  data.forEach((o, i) => {
+    let y = H;
+    const x = 30 + i * (bw + gap);
+    Object.keys(CATS).forEach((c) => {
+      if (!o[c]) return;
+      const h = o[c] / mx * (H - 14);
+      y -= h;
+      s += `<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 1)}" rx="2" fill="${CATS[c].c}"/>`;
+    });
+    s += `<text x="${x + bw / 2}" y="${H + 12}" text-anchor="middle">${MS[+ms[i].slice(5) - 1]}</text>`;
+  });
+  s += `<text x="0" y="12">${nf0.format(mx)}</text><line x1="28" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>`;
+  return `<svg viewBox="0 0 ${W} ${H + 18}" width="100%">${s}</svg>`;
+}
+function chartLine(pts, fmt, color) {
+  if (pts.length < 2) return `<div class="empty" style="padding:16px">Нужно минимум 2 заправки «до полного бака»</div>`;
+  const W = 340, H = 130, ys = pts.map((p) => p.y), mn = Math.min(...ys), mx = Math.max(...ys), sp = mx - mn || 1;
+  const X = (i) => 20 + i * (W - 30) / (pts.length - 1), Y = (v) => H - 8 - (v - mn) / sp * (H - 30);
+  const d = pts.map((p, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p.y).toFixed(1)).join(" ");
+  const avg = ys.reduce((a, b) => a + b, 0) / ys.length;
+  return `<svg viewBox="0 0 ${W} ${H + 16}" width="100%"><line x1="20" x2="${W - 10}" y1="${Y(avg)}" y2="${Y(avg)}" stroke="var(--mut)" stroke-dasharray="3 4" opacity=".6"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="3.5" fill="${color}"/>`).join("")}<text x="0" y="${Y(mx) + 3}">${fmt(mx)}</text><text x="0" y="${Y(mn) + 3}">${fmt(mn)}</text><text x="${W - 10}" y="${H + 12}" text-anchor="end">среднее ${fmt(avg)}</text></svg>`;
+}
+function stats_() {
+  return "";
+}
+function statsView() {
+  const car = curCar(), st = stats(car, ui.period || 0), all = stats(car, 0), segs = fuelSegs(car.id);
+  const cats = Object.entries(st.byCat).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  const pr = S.records.filter((r) => r.carId === car.id && r.type === "fuel" && r.liters > 0 && r.cost > 0).sort((a, b) => a.date.localeCompare(b.date)).slice(-20).map((r) => ({ y: r.cost / r.liters }));
+  return `<div class="chips">${[[30, "30 дней"], [90, "90 дней"], [365, "Год"], [0, "Всё время"]].map((p) => `<button class="chip ${ui.period === p[0] ? "on" : ""}" data-a="period" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ <div class="tiles"><div class="tile"><div class="l">Всего потрачено</div><div class="v">${money(st.total)}</div></div><div class="tile"><div class="l">Без топлива</div><div class="v">${money(st.total - st.fuelCost)}</div></div>
+ <div class="tile"><div class="l">Пробег за период</div><div class="v">${st.dist != null ? nf0.format(st.dist) : "—"}</div><div class="s">км по записям</div></div><div class="tile"><div class="l">Стоимость 1 км</div><div class="v">${st.perKm != null ? nf1.format(st.perKm) + " " + cur() : "—"}</div></div>
+ <div class="tile"><div class="l">Средний расход</div><div class="v">${st.l100 != null ? nf1.format(st.l100) : "—"}</div><div class="s">л / 100 км</div></div><div class="tile"><div class="l">Цена литра (ср.)</div><div class="v">${st.ppl != null ? nf1.format(st.ppl) : "—"}</div><div class="s">${cur()} / л</div></div></div>
+ <h3>Расходы по месяцам</h3><div class="card">${chartMonths(car)}<div class="legend">${Object.entries(CATS).map(([k, c]) => `<span><i style="background:${c.c}"></i>${c.n}</span>`).join("")}</div></div>
+ <h3>На что уходят деньги</h3><div class="card">${cats.length ? cats.map(([k, v]) => `<div class="hbar"><div class="top"><span>${CATS[k].i} ${CATS[k].n}</span><b>${money(v)} <span class="mut sm">${Math.round(v / st.total * 100)}%</span></b></div><div class="b"><div style="width:${v / cats[0][1] * 100}%;background:${CATS[k].c}"></div></div></div>`).join("") : '<div class="empty" style="padding:12px">Нет данных за период</div>'}</div>
+ <h3>Расход топлива, л/100 км</h3><div class="card">${chartLine(segs.slice(-20).map((s) => ({ y: s.l100 })), (v) => nf1.format(v), "#ffb02e")}</div>
+ <h3>Цена литра, ${cur()}</h3><div class="card">${chartLine(pr, (v) => nf1.format(v), "#4f8cff")}</div>
+ <div class="card"><div class="kv"><span>Записей всего</span><span>${all.rs.length}</span></div><div class="kv"><span>Потрачено за всё время</span><span>${money(all.total)}</span></div></div>`;
+}
+window.stats_view = statsView;
+function more() {
+  const est = S.cars.length ? "" : "";
+  return `<h3>Гараж <button data-a="carAdd">+ Авто</button></h3>
+ ${S.cars.length ? S.cars.map((c) => `<div class="card flex"><div class="ic" style="background:var(--card2)">${c.photo ? `<img class="thumb" style="width:42px;height:42px" src="${c.photo}">` : "🚗"}</div><div class="grow"><b>${esc(c.name)}</b>${c.id === curCar().id ? ' <span class="pill ok">выбрано</span>' : ""}<div class="mut sm">${esc([c.make, c.year, c.plate].filter(Boolean).join(" · "))} · ${km(c.odo)}</div></div><button class="btn sec" data-a="carEdit" data-id="${c.id}">✏️</button></div>`).join("") : '<div class="card empty">Пока нет автомобилей</div>'}
+ <h3>Данные и резервные копии</h3>
+ <div class="card"><p class="sm mut" style="margin-top:0">Все данные хранятся в памяти этого телефона (в браузере). Если очистить данные Safari/удалить значок — они пропадут, поэтому периодически делайте экспорт. Последняя копия: <b>${S.settings.lastBackup ? fmtDate(S.settings.lastBackup) : "не делалась"}</b></p>
+ <div style="display:grid;gap:8px"><button class="btn" data-a="exp">💾 Скачать файл-копию (.json)</button><button class="btn sec" data-a="share">📤 Отправить / сохранить в «Файлы»</button>
+ <label class="btn sec">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label>
+ ${curCar() ? `<button class="btn sec" data-a="csv">📊 Выгрузить историю в CSV (Excel)</button><button class="btn sec" data-a="print">🖨️ Отчёт по авто / PDF</button>` : ""}</div><div class="sm mut" id="usage" style="margin-top:10px"></div></div>
+ <h3>Настройки</h3>
+ <div class="card"><div class="two"><div class="f"><label>Валюта</label><input id="cu" value="${esc(S.settings.currency)}" maxlength="4"></div><div class="f"><label>Тема</label><select id="th">${[["auto", "Авто"], ["dark", "Тёмная"], ["light", "Светлая"]].map((t) => `<option value="${t[0]}" ${S.settings.theme === t[0] ? "selected" : ""}>${t[1]}</option>`).join("")}</select></div></div></div>
+ <div class="card sm mut"><b style="color:var(--txt)">📲 На экран «Домой» (iPhone):</b> откройте страницу в Safari → «Поделиться» → «На экран „Домой“». Дальше приложение открывается как обычное.</div>
+ <div class="card"><button class="btn red full" data-a="wipe">🗑️ Удалить все данные</button></div>
+ <p class="mut sm" style="text-align:center">Дневник авто · данные хранятся только у вас</p>`;
+}
+function closeSheet() {
+  $$(".ov").forEach((e) => e.remove());
+  document.body.style.overflow = "";
+}
+function sheet(title, body) {
+  closeSheet();
+  const o = document.createElement("div");
+  o.className = "ov";
+  o.innerHTML = `<div class="sh"><div class="shh"><b>${title}</b><button class="x" data-a="close">✕</button></div><div class="shb">${body}</div></div>`;
+  o.addEventListener("click", (e) => {
+    if (e.target === o) closeSheet();
+  });
+  document.body.appendChild(o);
+  document.body.style.overflow = "hidden";
+  return o;
+}
+const fld = (l, h, c = "") => `<div class="f ${c}"><label>${l}</label>${h}</div>`;
+function readImg(file, max = 1e3, q = 0.72) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas");
+        c.width = im.width * k;
+        c.height = im.height * k;
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        res(c.toDataURL("image/jpeg", q));
+      };
+      im.onerror = rej;
+      im.src = fr.result;
+    };
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+}
+function photoField(o, get, set, label) {
+  const box = $("[data-ph]", o);
+  const draw = () => {
+    const v = get();
+    box.innerHTML = (v ? `<img class="thumb" src="${v}"> <button type="button" class="btn red" data-rm>Убрать</button>` : "") + `<label class="btn sec">📷 ${label}<input type="file" accept="image/*" hidden></label>`;
+    $("input", box).onchange = async (e) => {
+      const f = e.target.files[0];
+      if (f) {
+        try {
+          set(await readImg(f, label === "Фото авто" ? 600 : 1e3));
+          draw();
+        } catch (x) {
+          toast("Не удалось загрузить фото");
+        }
+      }
+    };
+    const rm = $("[data-rm]", box);
+    if (rm) rm.onclick = () => {
+      set(null);
+      draw();
+    };
+  };
+  draw();
+}
+function allItems(type) {
+  const set = /* @__PURE__ */ new Map();
+  const add = (s) => {
+    if (s && !set.has(norm(s))) set.set(norm(s), s);
+  };
+  (PRESETS[type] || []).forEach(add);
+  const car = curCar();
+  S.reminders.filter((r) => r.carId === car.id).forEach((r) => {
+    if (type === "service" || type === "tires" && /шин|баланс|развал/i.test(r.title)) add(r.title);
+  });
+  S.records.filter((r) => r.carId === car.id && r.type === type).forEach((r) => (r.items || []).forEach(add));
+  return [...set.values()];
+}
+function recForm(id, pre = {}) {
+  var _a, _b, _c;
+  const car = curCar(), ex = id ? S.records.find((r2) => r2.id === id) : null;
+  const r = ex ? JSON.parse(JSON.stringify(ex)) : { id: uid(), carId: car.id, type: pre.type || "service", date: today(), odo: car.odo || "", items: pre.item ? [pre.item] : [], title: "", cost: "", place: "", notes: "", liters: "", full: true, photo: null };
+  const o = sheet(ex ? "Редактировать запись" : "Новая запись", `<form id="rf">
+ <div class="cats">${Object.entries(CATS).map(([k, c]) => `<button type="button" data-c="${k}"><i>${c.i}</i>${c.n}</button>`).join("")}</div>
+ <div class="two">${fld("Дата", `<input type="date" name="date" value="${r.date}" required>`)}${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = r.odo) != null ? _a : ""}" placeholder="${car.odo || ""}">`)}</div>
+ <div id="itemsBox" class="f"><label>Что сделано / заменено</label><div class="chips" style="flex-wrap:wrap;overflow:visible" id="chipsArea"></div><div class="flex"><input id="newItem" placeholder="Своя позиция…" class="grow"><button type="button" class="btn sec" id="addItem">+</button></div></div>
+ ${fld("Название / описание", `<input name="title" value="${esc(r.extra != null ? r.extra : (r.items || []).length ? "" : r.title || "")}" placeholder="например: ТО-60 у официалов">`, "tt")}
+ <div id="fuelBox"><div class="two">${fld("Литры", `<input name="liters" inputmode="decimal" value="${(_b = r.liters) != null ? _b : ""}">`)}${fld("Цена за литр", `<input name="ppl" inputmode="decimal" placeholder="авто">`)}</div><div class="f"><label class="sw"><input type="checkbox" name="full" ${r.full !== false ? "checked" : ""}> Заправил «до полного» (для расчёта расхода)</label></div></div>
+ <div class="two">${fld("Сумма, " + cur(), `<input name="cost" inputmode="decimal" value="${(_c = r.cost) != null ? _c : ""}">`)}${fld("Место / сервис", `<input name="place" value="${esc(r.place || "")}" placeholder="АЗС, СТО…">`)}</div>
+ ${fld("Заметки", `<textarea name="notes" placeholder="Артикулы, марка масла, что мастер сказал…">${esc(r.notes || "")}</textarea>`)}
+ <div class="f"><label>Фото (чек, заказ-наряд)</label><div class="flex" data-ph style="flex-wrap:wrap"></div></div>
+ <button class="btn full" type="submit">${ex ? "Сохранить" : "Добавить запись"}</button></form>`);
+  const F = $("#rf", o), E = F.elements;
+  const draw = () => {
+    $$(".cats button", o).forEach((b) => b.classList.toggle("on", b.dataset.c === r.type));
+    const fuel = r.type === "fuel";
+    $("#fuelBox", o).style.display = fuel ? "" : "none";
+    $("#itemsBox", o).style.display = fuel ? "none" : "";
+    $(".tt", o).style.display = fuel ? "none" : "";
+    const list = [...allItems(r.type)];
+    (r.items || []).forEach((i) => {
+      if (!list.some((x) => norm(x) === norm(i))) list.push(i);
+    });
+    $("#chipsArea", o).innerHTML = list.length ? list.map((i) => `<button type="button" class="chip ${(r.items || []).some((x) => norm(x) === norm(i)) ? "on" : ""}" data-i="${esc(i)}">${esc(i)}</button>`).join("") : '<span class="mut sm">Введите название ниже</span>';
+  };
+  o.addEventListener("click", (e) => {
+    const c = e.target.closest(".cats button");
+    if (c) {
+      r.type = c.dataset.c;
+      draw();
+      return;
+    }
+    const i = e.target.closest("[data-i]");
+    if (i) {
+      const v = i.dataset.i, k = norm(v);
+      r.items = r.items || [];
+      const ix = r.items.findIndex((x) => norm(x) === k);
+      ix >= 0 ? r.items.splice(ix, 1) : r.items.push(v);
+      draw();
+    }
+  });
+  const addI = () => {
+    const v = $("#newItem", o).value.trim();
+    if (!v) return;
+    r.items = r.items || [];
+    if (!r.items.some((x) => norm(x) === norm(v))) r.items.push(v);
+    $("#newItem", o).value = "";
+    draw();
+  };
+  $("#addItem", o).onclick = addI;
+  $("#newItem", o).onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addI();
+    }
+  };
+  const L = E.liters, P = E.ppl, C = E.cost;
+  const calc = (src) => {
+    const l = pn(L.value), p = pn(P.value), c = pn(C.value);
+    if (src !== "c" && l && p && src !== "x") {
+      C.value = Math.round(l * p * 100) / 100;
+    } else if (src === "c" && l && c) P.value = Math.round(c / l * 100) / 100;
+  };
+  L.oninput = () => calc("l");
+  P.oninput = () => calc("p");
+  C.oninput = () => calc("c");
+  if (ex && ex.type === "fuel" && ex.liters && ex.cost) P.value = Math.round(ex.cost / ex.liters * 100) / 100;
+  photoField(o, () => r.photo, (v) => r.photo = v, "Добавить фото");
+  draw();
+  F.onsubmit = (e) => {
+    e.preventDefault();
+    const g = (n) => E[n].value;
+    const odo = pn(g("odo")), date = g("date");
+    const rec = { id: r.id, carId: car.id, type: r.type, date, odo, cost: pn(g("cost")) || 0, place: g("place").trim(), notes: g("notes").trim(), photo: r.photo || null };
+    if (r.type === "fuel") {
+      rec.liters = pn(g("liters")) || 0;
+      rec.full = E.full.checked;
+      rec.items = [];
+      rec.title = "Заправка";
+    } else {
+      rec.items = r.items || [];
+      const t = g("title").trim();
+      rec.extra = t;
+      rec.title = [rec.items.join(", "), t].filter(Boolean).join(" — ") || CATS[r.type].n;
+    }
+    if (odo != null) {
+      const prev = S.records.filter((x) => x.carId === car.id && x.id !== rec.id && x.odo != null);
+      const before = prev.filter((x) => x.date <= date).sort((a, b) => b.date.localeCompare(a.date) || b.odo - a.odo)[0], after = prev.filter((x) => x.date > date).sort((a, b) => a.date.localeCompare(b.date))[0];
+      if (before && odo < before.odo || after && odo > after.odo) {
+        if (!confirm("Пробег не вписывается в хронологию соседних записей. Всё равно сохранить?")) return;
+      }
+    }
+    const i = S.records.findIndex((x) => x.id === rec.id);
+    i >= 0 ? S.records[i] = rec : S.records.push(rec);
+    if (odo != null && odo > (car.odo || 0)) car.odo = odo;
+    save();
+    closeSheet();
+    render();
+    toast(ex ? "Сохранено ✓" : "Запись добавлена ✓");
+  };
+}
+function recDetail(id) {
+  const r = S.records.find((x) => x.id === id);
+  if (!r) return;
+  const c = CATS[r.type] || CATS.other;
+  const sg = fuelSegs(r.carId).find((s) => s.rid === id);
+  const rows = [["Категория", c.i + " " + c.n], ["Дата", fmtDate(r.date)], ["Пробег", r.odo != null ? km(r.odo) : null], ["Сумма", r.cost ? money(r.cost) : null], r.type === "fuel" ? ["Литры", r.liters ? nf1.format(r.liters) + " л" : null] : null, r.type === "fuel" && r.liters && r.cost ? ["Цена литра", nf2.format(r.cost / r.liters) + " " + cur()] : null, r.type === "fuel" ? ["Полный бак", r.full ? "да" : "нет"] : null, sg ? ["Расход на участке", nf1.format(sg.l100) + " л/100 км (" + km(sg.km) + ")"] : null, r.place ? ["Место", esc(r.place)] : null].filter((x) => x && x[1]);
+  sheet(esc(recTitle(r)), `${rows.map((x) => `<div class="kv"><span>${x[0]}</span><span>${x[1]}</span></div>`).join("")}${(r.items || []).length ? `<div class="kv"><span>Позиции</span><span>${r.items.map(esc).join(", ")}</span></div>` : ""}${r.notes ? `<div class="card sm" style="margin-top:10px;white-space:pre-wrap">${esc(r.notes)}</div>` : ""}${r.photo ? `<img class="photo" src="${r.photo}">` : ""}
+ <div class="two" style="margin-top:14px"><button class="btn sec" data-a="recEdit" data-id="${id}">✏️ Изменить</button><button class="btn sec" data-a="recDup" data-id="${id}">⧉ Повторить</button></div><button class="btn red full" style="margin-top:10px" data-a="recDel" data-id="${id}">Удалить</button>`);
+}
+function carForm(id) {
+  var _a;
+  const ex = id ? S.cars.find((c2) => c2.id === id) : null, c = ex ? __spreadValues({}, ex) : { id: uid(), name: "", make: "", year: "", plate: "", vin: "", odo: "", fuel: "", notes: "", photo: null };
+  const o = sheet(ex ? "Автомобиль" : "Новый автомобиль", `<form id="cf">
+ ${fld("Название", `<input name="name" value="${esc(c.name)}" placeholder="Моя Camry" required>`)}
+ ${fld("Марка / модель", `<input name="make" value="${esc(c.make)}" placeholder="Toyota Camry">`)}
+ <div class="two">${fld("Год", `<input name="year" inputmode="numeric" value="${esc(c.year)}">`)}${fld("Госномер", `<input name="plate" value="${esc(c.plate)}">`)}</div>
+ ${fld("Текущий пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = c.odo) != null ? _a : ""}" required>`)}
+ ${fld("VIN", `<input name="vin" value="${esc(c.vin)}" style="text-transform:uppercase">`)}
+ ${fld("Топливо / двигатель", `<input name="fuel" value="${esc(c.fuel)}" placeholder="АИ-95, 2.5 л">`)}
+ ${fld("Заметки", `<textarea name="notes">${esc(c.notes)}</textarea>`)}
+ <div class="f"><label>Фото</label><div class="flex" data-ph style="flex-wrap:wrap"></div></div>
+ ${ex ? "" : `<div class="f"><label class="sw"><input type="checkbox" name="defs" checked> Добавить стандартные интервалы обслуживания</label></div>`}
+ <button class="btn full" type="submit">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="carDel" data-id="${id}">Удалить авто и все его записи</button>` : ""}</form>`);
+  photoField(o, () => c.photo, (v) => c.photo = v, "Фото авто");
+  $("#cf", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    Object.assign(c, { name: F.name.value.trim(), make: F.make.value.trim(), year: F.year.value.trim(), plate: F.plate.value.trim(), vin: F.vin.value.trim().toUpperCase(), fuel: F.fuel.value.trim(), notes: F.notes.value.trim(), odo: pn(F.odo.value) || 0 });
+    const i = S.cars.findIndex((x) => x.id === c.id);
+    if (i >= 0) S.cars[i] = c;
+    else {
+      S.cars.push(c);
+      S.active = c.id;
+      if (F.defs && F.defs.checked) addDefaults(c.id);
+    }
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function addDefaults(carId) {
+  DEFAULT_REM.forEach((d) => {
+    if (!S.reminders.some((r) => r.carId === carId && norm(r.title) === norm(d[0]))) S.reminders.push({ id: uid(), carId, title: d[0], km: d[1], months: d[2] });
+  });
+}
+function odoForm() {
+  const car = curCar();
+  const o = sheet("Текущий пробег", `<form id="of">${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${car.odo || ""}" required autofocus>`)}<button class="btn full">Сохранить</button></form>`);
+  $("#of", o).onsubmit = (e) => {
+    e.preventDefault();
+    const v = pn(e.target.elements.odo.value);
+    if (v == null) return;
+    if (v < car.odo && !confirm("Новый пробег меньше текущего. Продолжить?")) return;
+    car.odo = v;
+    save();
+    closeSheet();
+    render();
+    toast("Пробег обновлён ✓");
+  };
+}
+function remForm(id) {
+  var _a;
+  const car = curCar(), ex = id ? S.reminders.find((r2) => r2.id === id) : null, r = ex || { id: uid(), carId: car.id, title: "", km: "", months: "" };
+  const o = sheet(ex ? "Расходник" : "Новый расходник", `<form id="mf">${fld("Название", `<input name="title" list="dl" value="${esc(r.title)}" required placeholder="Масло двигателя"><datalist id="dl">${PRESETS.service.concat(PRESETS.tires).map((x) => `<option value="${esc(x)}">`).join("")}</datalist>`)}
+ <div class="two">${fld("Менять каждые, км", `<input name="km" inputmode="numeric" value="${r.km || ""}" placeholder="10000">`)}${fld("и/или каждые, мес.", `<input name="months" inputmode="numeric" value="${r.months || ""}" placeholder="12">`)}</div>
+ <div class="mut sm" style="margin:-4px 0 10px">Дата и пробег последней замены берутся из записей в истории. Если записей ещё нет — укажите вручную:</div>
+ <div class="two">${fld("Последняя замена, дата", `<input type="date" name="bd" value="${r.baseDate || ""}">`)}${fld("на пробеге, км", `<input name="bo" inputmode="numeric" value="${(_a = r.baseOdo) != null ? _a : ""}">`)}</div>
+ <button class="btn full">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="remDel" data-id="${id}">Удалить</button>` : ""}</form>`);
+  $("#mf", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    const t = F.title.value.trim();
+    if (!pn(F.km.value) && !pn(F.months.value)) {
+      toast("Укажите интервал в км или месяцах");
+      return;
+    }
+    Object.assign(r, { title: t, km: pn(F.km.value) || 0, months: pn(F.months.value) || 0, baseDate: F.bd.value || null, baseOdo: pn(F.bo.value) });
+    if (!ex) S.reminders.push(r);
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function docForm(id) {
+  const car = curCar(), ex = id ? S.docs.find((d2) => d2.id === id) : null, d = ex || { id: uid(), carId: car.id, title: "", expires: "", notes: "" };
+  const o = sheet(ex ? "Документ" : "Новый документ", `<form id="df">${fld("Название", `<input name="title" list="dl2" value="${esc(d.title)}" required placeholder="ОСАГО"><datalist id="dl2">${["ОСАГО", "КАСКО", "Техосмотр", "Диагностическая карта", "Транспортный налог", "Водительское удостоверение", "Страховка (доп.)"].map((x) => `<option value="${x}">`).join("")}</datalist>`)}${fld("Действует до", `<input type="date" name="ex" value="${d.expires}" required>`)}${fld("Заметки", `<textarea name="n">${esc(d.notes)}</textarea>`)}<button class="btn full">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="docDel" data-id="${id}">Удалить</button>` : ""}</form>`);
+  $("#df", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    Object.assign(d, { title: F.title.value.trim(), expires: F.ex.value, notes: F.n.value.trim() });
+    if (!ex) S.docs.push(d);
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function carsSheet() {
+  sheet("Мои автомобили", `${S.cars.map((c) => `<button class="card flex" style="width:100%;text-align:left;${c.id === curCar().id ? "border-color:var(--acc)" : ""}" data-a="carPick" data-id="${c.id}"><span style="font-size:26px">🚗</span><div class="grow"><b>${esc(c.name)}</b><div class="mut sm">${km(c.odo)}</div></div>${c.id === curCar().id ? "✓" : ""}</button>`).join("")}<button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button>`);
+}
+function download(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 1500);
+}
+async function exportJSON(share) {
+  const name = `avto-dnevnik-${today()}.json`, blob = new Blob([JSON.stringify(S)], { type: "application/json" });
+  if (share) {
+    const f = new File([blob], name, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try {
+        await navigator.share({ files: [f], title: "Дневник авто — копия" });
+      } catch (e) {
+        if (e.name === "AbortError") return;
+      }
+    } else {
+      toast("Отправка недоступна — скачиваю файл");
+      download(blob, name);
+    }
+  } else download(blob, name);
+  S.settings.lastBackup = today();
+  save();
+  render();
+  toast("Копия сохранена ✓");
+}
+function exportCSV() {
+  const car = curCar(), q = (s) => '"' + String(s != null ? s : "").replace(/"/g, '""') + '"';
+  const rows = [["Дата", "Пробег", "Категория", "Название", "Сумма", "Литры", "Цена/л", "Место", "Заметки"]];
+  carRecs(car.id).reverse().forEach((r) => {
+    var _a;
+    return rows.push([fmtDate(r.date), (_a = r.odo) != null ? _a : "", CATS[r.type].n, r.title, r.cost || "", r.liters || "", r.liters && r.cost ? nf2.format(r.cost / r.liters) : "", r.place, r.notes]);
+  });
+  download(new Blob(["\uFEFF" + rows.map((r) => r.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), `${car.name}-istoriya.csv`);
+}
+function importFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d;
+    try {
+      d = JSON.parse(fr.result);
+    } catch (e) {
+      return toast("Это не файл дневника");
+    }
+    if (!d || !Array.isArray(d.cars) || !Array.isArray(d.records)) return toast("Неверный формат файла");
+    const o = sheet("Импорт данных", `<div class="card"><div class="kv"><span>Автомобилей</span><span>${d.cars.length}</span></div><div class="kv"><span>Записей</span><span>${d.records.length}</span></div><div class="kv"><span>Напоминаний</span><span>${(d.reminders || []).length}</span></div></div>
+  <div style="display:grid;gap:10px"><button class="btn" id="im1">➕ Объединить с текущими</button><button class="btn red" id="im2">♻️ Заменить всё</button></div><p class="mut sm">«Объединить» добавит только то, чего у вас ещё нет.</p>`);
+    const done = () => {
+      if (!S.active || !S.cars.some((c) => c.id === S.active)) S.active = S.cars[0] && S.cars[0].id;
+      save();
+      closeSheet();
+      render();
+      toast("Импортировано ✓");
+    };
+    $("#im1", o).onclick = () => {
+      ["cars", "records", "reminders", "docs"].forEach((k) => {
+        const have = new Set((S[k] || []).map((x) => x.id));
+        (d[k] || []).forEach((x) => {
+          if (!have.has(x.id)) S[k].push(x);
+        });
+      });
+      done();
+    };
+    $("#im2", o).onclick = () => {
+      if (!confirm("Все текущие данные будут заменены. Продолжить?")) return;
+      S = Object.assign(blank(), d);
+      S.settings = Object.assign(blank().settings, d.settings || {});
+      done();
+    };
+  };
+  fr.readAsText(file);
+}
+function printReport() {
+  const car = curCar(), rs = carRecs(car.id), st = stats(car, 0), rl = remList(car);
+  $("#print").innerHTML = `<h1>${esc(car.name)}</h1><div>${esc([car.make, car.year, car.plate, car.vin && "VIN " + car.vin].filter(Boolean).join(" · "))}<br>Пробег: ${km(car.odo)} · Отчёт от ${fmtDate(today())}</div>
+ <h2>Итого</h2><div>Потрачено: ${money(st.total)} · Средний расход: ${st.l100 ? nf1.format(st.l100) + " л/100 км" : "—"}</div>
+ <h2>Расходники</h2><table><tr><th>Позиция</th><th>Интервал</th><th>Последний раз</th><th>Следующий</th></tr>${rl.map((s) => `<tr><td>${esc(s.r.title)}</td><td>${[s.r.km ? km(s.r.km) : "", s.r.months ? s.r.months + " мес." : ""].filter(Boolean).join(" / ")}</td><td>${s.lastDate ? fmtDate(s.lastDate) : ""} ${s.lastOdo != null ? km(s.lastOdo) : ""}</td><td>${s.nextOdo != null ? km(s.nextOdo) : ""} ${s.nextDate ? fmtDate(s.nextDate) : ""}</td></tr>`).join("")}</table>
+ <h2>История</h2><table><tr><th>Дата</th><th>Пробег</th><th>Запись</th><th>Сумма</th><th>Место</th></tr>${rs.map((r) => {
+    var _a;
+    return `<tr><td>${fmtDate(r.date)}</td><td>${(_a = r.odo) != null ? _a : ""}</td><td>${esc(recTitle(r))}${r.notes ? "<br><i>" + esc(r.notes) + "</i>" : ""}</td><td>${r.cost ? nf0.format(r.cost) : ""}</td><td>${esc(r.place || "")}</td></tr>`;
+  }).join("")}</table>`;
+  setTimeout(() => window.print(), 100);
+}
+function demo() {
+  const id = uid(), t = /* @__PURE__ */ new Date(), dt = (n) => iso(new Date(t.getTime() - n * 864e5));
+  S = blank();
+  S.settings.lastBackup = null;
+  S.cars = [{ id, name: "Моя Camry", make: "Toyota Camry", year: "2018", plate: "А777АА 125", vin: "", fuel: "АИ-95, 2.5 л", notes: "", odo: 87400, photo: null }];
+  S.active = id;
+  addDefaults(id);
+  const R = (n, o, type, title, cost, extra = {}) => S.records.push(Object.assign({ id: uid(), carId: id, type, date: dt(n), odo: o, title, items: [], cost, place: "", notes: "", photo: null }, extra));
+  R(430, 74200, "service", "Масло двигателя, Масляный фильтр", 9800, { items: ["Масло двигателя", "Масляный фильтр"], place: "Toyota-сервис" });
+  R(300, 79800, "service", "Салонный фильтр, Воздушный фильтр", 3200, { items: ["Салонный фильтр", "Воздушный фильтр"] });
+  R(200, 83e3, "tires", "Шиномонтаж сезонный", 3500, { items: ["Шиномонтаж сезонный"] });
+  R(120, 85200, "service", "Масло двигателя, Масляный фильтр", 10400, { items: ["Масло двигателя", "Масляный фильтр"], place: "СТО на Фокина" });
+  R(60, 86600, "repair", "Подвеска — стойки стабилизатора", 7800);
+  R(14, 87300, "docs", "ОСАГО", 11200, { items: ["ОСАГО"] });
+  const fills = [[330, 75e3, 52, 2860, 1], [290, 76400, 50, 2750, 1], [240, 78300, 48, 2640, 1], [180, 80900, 51, 2900, 1], [130, 83600, 47, 2740, 1], [90, 85500, 49, 2900, 1], [45, 86500, 36, 2150, 1], [20, 87e3, 40, 2400, 1]];
+  fills.forEach((f) => R(f[0], f[1], "fuel", "Заправка", f[3], { liters: f[2], full: true, place: "АЗС" }));
+  S.docs.push({ id: uid(), carId: id, title: "ОСАГО", expires: iso(new Date(t.getTime() + 350 * 864e5)), notes: "" }, { id: uid(), carId: id, title: "Техосмотр", expires: iso(new Date(t.getTime() + 20 * 864e5)), notes: "" });
+  save();
+  render();
+  toast("Демо загружено");
+}
+const A = {
+  close: closeSheet,
+  tab: (d) => {
+    ui.view = d.v;
+    closeSheet();
+    render();
+    scrollTo(0, 0);
+  },
+  addRec: (d) => recForm(null, { type: d.t, item: d.item }),
+  recOpen: (d) => recDetail(d.id),
+  recEdit: (d) => recForm(d.id),
+  recDup: (d) => {
+    const r = S.records.find((x) => x.id === d.id);
+    const n = JSON.parse(JSON.stringify(r));
+    n.id = uid();
+    n.date = today();
+    n.odo = curCar().odo;
+    S.records.push(n);
+    save();
+    closeSheet();
+    recForm(n.id);
+  },
+  recDel: (d) => {
+    if (confirm("Удалить запись?")) {
+      S.records = S.records.filter((x) => x.id !== d.id);
+      save();
+      closeSheet();
+      render();
+      toast("Удалено");
+    }
+  },
+  cat: (d) => {
+    ui.cat = d.c;
+    render();
+  },
+  period: (d) => {
+    ui.period = +d.p;
+    render();
+  },
+  odo: odoForm,
+  cars: carsSheet,
+  carAdd: () => carForm(),
+  carEdit: (d) => carForm(d.id),
+  carPick: (d) => {
+    S.active = d.id;
+    save();
+    closeSheet();
+    render();
+  },
+  carDel: (d) => {
+    if (confirm("Удалить автомобиль вместе со всеми записями и напоминаниями?")) {
+      S.cars = S.cars.filter((c) => c.id !== d.id);
+      ["records", "reminders", "docs"].forEach((k) => S[k] = S[k].filter((x) => x.carId !== d.id));
+      S.active = S.cars[0] && S.cars[0].id;
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  remAdd: () => remForm(),
+  remEdit: (d) => remForm(d.id),
+  remDel: (d) => {
+    if (confirm("Удалить расходник из списка? Записи в истории останутся.")) {
+      S.reminders = S.reminders.filter((r) => r.id !== d.id);
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  remDefaults: () => {
+    addDefaults(curCar().id);
+    save();
+    render();
+    toast("Добавлено — проверьте интервалы");
+  },
+  docAdd: () => docForm(),
+  docEdit: (d) => docForm(d.id),
+  docDel: (d) => {
+    if (confirm("Удалить документ?")) {
+      S.docs = S.docs.filter((x) => x.id !== d.id);
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  exp: () => exportJSON(false),
+  share: () => exportJSON(true),
+  csv: exportCSV,
+  print: printReport,
+  demo,
+  wipe: () => {
+    if (confirm("Удалить ВСЕ данные без возможности восстановления?") && confirm("Точно удалить? Сначала лучше сделать копию.")) {
+      S = blank();
+      save();
+      render();
+      toast("Данные удалены");
+    }
+  }
+};
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-a]");
+  if (!el) return;
+  const f = A[el.dataset.a];
+  if (f) {
+    e.preventDefault();
+    f(el.dataset, el);
+  }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.matches && t.matches("[data-imp]") && t.files[0]) {
+    importFile(t.files[0]);
+    t.value = "";
+  }
+  if (t.id === "cu") {
+    S.settings.currency = t.value.trim() || "₽";
+    save();
+  }
+  if (t.id === "th") {
+    S.settings.theme = t.value;
+    save();
+    render();
+  }
+});
+function makeIcon() {
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 180;
+    const x = c.getContext("2d");
+    const g = x.createLinearGradient(0, 0, 180, 180);
+    g.addColorStop(0, "#4f8cff");
+    g.addColorStop(1, "#7a5cff");
+    x.fillStyle = g;
+    x.fillRect(0, 0, 180, 180);
+    x.font = "100px serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillText("🚗", 90, 98);
+    $("#touchIcon").href = c.toDataURL("image/png");
+  } catch (e) {
+  }
+}
+(async () => {
+  try {
+    makeIcon();
+    try {
+      await load();
+    } catch (e) {
+    }
+    applyTheme();
+    render();
+    const u = $("#usage");
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then((e) => {
+        const el = $("#usage");
+        if (el) el.textContent = "Занято в хранилище: " + nf1.format((e.usage || 0) / 1048576) + " МБ";
+      });
+    }
+    window.__ready = 1;
+  } catch (e) {
+    window.__show && window.__show("Старт: " + (e && e.stack || e));
+  }
+})();
+</script>
+</body>
+</html>
