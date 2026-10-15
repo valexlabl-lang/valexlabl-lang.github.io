@@ -9,7 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0e1116">
 <title>Дневник авто</title>
-<link rel="apple-touch-icon" id="touchIcon" href="">
+<link rel="apple-touch-icon" href="avto-icon-180.png">
+<link rel="icon" type="image/png" href="avto-icon-180.png">
 <style>
 :root{--bg:#0e1116;--card:#171b22;--card2:#1f252e;--txt:#eef2f7;--mut:#8b96a5;--line:#273040;--acc:#4f8cff;--acc2:#7a5cff;--ok:#34c759;--warn:#ffb02e;--bad:#ff5a5f;--sh:0 8px 30px rgba(0,0,0,.35)}
 html[data-theme=light]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}
@@ -1048,7 +1049,7 @@ function makeIcon() {
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.fillText("🚗", 90, 98);
-    $("#touchIcon").href = c.toDataURL("image/png");
+    
   } catch (e) {
   }
 }
