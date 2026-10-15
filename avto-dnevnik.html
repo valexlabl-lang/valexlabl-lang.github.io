@@ -225,7 +225,7 @@ async function idbSet(k, v) {
     t.onerror = () => rej(t.error);
   });
 }
-const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], active: null });
+const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], places: [], active: null });
 let S = blank(), saveT = null;
 function save() {
   clearTimeout(saveT);
@@ -723,7 +723,8 @@ function recForm(id, pre = {}) {
     }).filter(Boolean).sort((a, b) => a.dist - b.dist);
   };
   const azsChips = (arr, title) => '<span class="mut sm" style="width:100%">' + title + '</span>' + arr.map((x) => `<button type="button" class="chip" data-azs="${esc(x.name)}">${esc(x.name === "АЗС" ? "АЗС без названия" : x.name)} · ${x.dist} м</button>`).join("");
-  azsBtn.onclick = () => {
+  let curPos = null;
+  const locate = (skipMine) => {
     if (!navigator.geolocation) return toast("Геолокация недоступна в этом браузере");
     azsBtn.disabled = true;
     azsBtn.textContent = "📍 Ищу…";
@@ -733,9 +734,19 @@ function recForm(id, pre = {}) {
       azsBtn.textContent = "📍 АЗС рядом";
     };
     navigator.geolocation.getCurrentPosition(async (pos) => {
+      curPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       try {
+        const mine = skipMine ? null : (S.places || []).map((pl) => ({ name: pl.name, dist: Math.round(hav(curPos.lat, curPos.lon, pl.lat, pl.lon)) })).filter((x) => x.dist <= 100).sort((a, b) => a.dist - b.dist)[0];
+        if (mine) {
+          E.place.value = mine.name;
+          autoPlace = E.place.value;
+          azsList.innerHTML = '<button type="button" class="chip" data-azsmap="1">🔎 Другая АЗС? Искать по карте</button>';
+          toast("📍 Ваше место: " + mine.name + " · " + mine.dist + " м");
+          done();
+          return;
+        }
         const seen = new Set();
-        const list = (await findAzs(pos.coords.latitude, pos.coords.longitude)).filter((x) => {
+        const list = (await findAzs(curPos.lat, curPos.lon)).filter((x) => {
           const k = norm(x.name);
           if (seen.has(k)) return false;
           seen.add(k);
@@ -760,7 +771,12 @@ function recForm(id, pre = {}) {
       done();
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
   };
+  azsBtn.onclick = () => locate(false);
   azsList.addEventListener("click", (e) => {
+    if (e.target.closest("[data-azsmap]")) {
+      locate(true);
+      return;
+    }
     const b = e.target.closest("[data-azs]");
     if (b) {
       E.place.value = b.dataset.azs;
@@ -789,6 +805,12 @@ function recForm(id, pre = {}) {
       if (before && odo < before.odo || after && odo > after.odo) {
         if (!confirm("Пробег не вписывается в хронологию соседних записей. Всё равно сохранить?")) return;
       }
+    }
+    if (r.type === "fuel" && curPos && rec.place) {
+      S.places = S.places || [];
+      const near = S.places.map((pl) => ({ pl, d: hav(curPos.lat, curPos.lon, pl.lat, pl.lon) })).filter((x) => x.d <= 100).sort((a, b) => a.d - b.d)[0];
+      if (near) near.pl.name = rec.place;
+      else S.places.push({ id: uid(), name: rec.place, lat: curPos.lat, lon: curPos.lon });
     }
     const i = S.records.findIndex((x) => x.id === rec.id);
     i >= 0 ? S.records[i] = rec : S.records.push(rec);
@@ -961,7 +983,7 @@ function importFile(file) {
       toast("Импортировано ✓");
     };
     $("#im1", o).onclick = () => {
-      ["cars", "records", "reminders", "docs"].forEach((k) => {
+      ["cars", "records", "reminders", "docs", "places"].forEach((k) => {
         const have = new Set((S[k] || []).map((x) => x.id));
         (d[k] || []).forEach((x) => {
           if (!have.has(x.id)) S[k].push(x);
