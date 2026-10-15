@@ -606,6 +606,7 @@ function recForm(id, pre = {}) {
   const r = ex ? JSON.parse(JSON.stringify(ex)) : { id: uid(), carId: car.id, type: pre.type || "service", date: today(), odo: car.odo || "", items: pre.item ? [pre.item] : [], title: "", cost: "", place: "", notes: "", liters: "", full: true, photo: null };
   const o = sheet(ex ? "Редактировать запись" : "Новая запись", `<form id="rf">
  <div class="cats">${Object.entries(CATS).map(([k, c]) => `<button type="button" data-c="${k}"><i>${c.i}</i>${c.n}</button>`).join("")}</div>
+ <button type="button" class="btn sec full" id="qrBtn" style="margin-bottom:12px">🧾 Сканировать QR с чека</button>
  <div class="two">${fld("Дата", `<input type="date" name="date" value="${r.date}" required>`)}${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = r.odo) != null ? _a : ""}" placeholder="${car.odo || ""}">`)}</div>
  <div id="itemsBox" class="f"><label>Что сделано / заменено</label><div class="chips" style="flex-wrap:wrap;overflow:visible" id="chipsArea"></div><div class="flex"><input id="newItem" placeholder="Своя позиция…" class="grow"><button type="button" class="btn sec" id="addItem">+</button></div></div>
  ${fld("Название / описание", `<input name="title" value="${esc(r.extra != null ? r.extra : (r.items || []).length ? "" : r.title || "")}" placeholder="например: ТО-60 у официалов">`, "tt")}
@@ -667,6 +668,7 @@ function recForm(id, pre = {}) {
     if (src !== "c" && l && p && src !== "x") {
       C.value = Math.round(l * p * 100) / 100;
     } else if (src === "c" && l && c) P.value = Math.round(c / l * 100) / 100;
+    else if (src === "l" && l && c && !p) P.value = Math.round(c / l * 100) / 100;
   };
   L.oninput = () => calc("l");
   P.oninput = () => calc("p");
@@ -782,6 +784,20 @@ function recForm(id, pre = {}) {
       E.place.value = b.dataset.azs;
       autoPlace = E.place.value;
     }
+  });
+  $("#qrBtn", o).onclick = () => openQrScanner((raw) => {
+    const q = parseFiscalQr(raw);
+    if (!q) {
+      toast("Это не QR кассового чека");
+      return;
+    }
+    E.date.value = q.date;
+    E.cost.value = q.sum;
+    if (!pn(L.value)) P.value = "";
+    C.dispatchEvent(new Event("input"));
+    const key = "ФН " + q.fn + " ФД " + q.fd;
+    if (!E.notes.value.includes(key)) E.notes.value = (E.notes.value ? E.notes.value + "\n" : "") + "Чек " + fmtDate(q.date) + " " + q.time + " · " + key + " ФП " + q.fp;
+    toast("🧾 " + fmtDate(q.date) + " · " + money(q.sum));
   });
   F.onsubmit = (e) => {
     e.preventDefault();
@@ -1207,6 +1223,72 @@ function makeIcon() {
   if(old&&old!==h&&!sessionStorage.getItem('cd_rl')){sessionStorage.setItem('cd_rl','1');location.reload()}
  }).catch(function(){});
 }catch(e){}})();
+</script>
+<script>
+/* Чтение QR кассового чека (ФНС): дата, время, сумма и реквизиты. Состав чека в QR не передаётся. */
+function parseFiscalQr(raw){
+ try{
+  var s=String(raw||'').trim(),q=s.indexOf('?')>=0?s.slice(s.indexOf('?')+1):s,o={};
+  q.split('&').forEach(function(p){var i=p.indexOf('=');if(i>0)o[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1).replace(/\+/g,' '))});
+  if(!o.t||!o.s||!o.fn)return null;
+  var m=/^(\d{4})-?(\d{2})-?(\d{2})T(\d{2}):?(\d{2})/.exec(o.t);
+  if(!m)return null;
+  var sum=parseFloat(String(o.s).replace(/\s/g,'').replace(',','.'));
+  if(!(sum>=0))return null;
+  return{date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5],sum:sum,fn:o.fn,fd:o.i||'',fp:o.fp||'',raw:s};
+ }catch(e){return null}
+}
+function loadJsQR(){return new Promise(function(res,rej){
+ if(window.jsQR)return res(window.jsQR);
+ var sc=document.createElement('script');sc.src='jsqr.min.js';
+ sc.onload=function(){window.jsQR?res(window.jsQR):rej(new Error('Библиотека QR не загрузилась'))};
+ sc.onerror=function(){rej(new Error('Библиотека QR не загрузилась, нужен интернет'))};
+ document.head.appendChild(sc)})}
+function openQrScanner(onRaw){
+ var ov=document.createElement('div');ov.className='ov';ov.style.zIndex=70;ov.style.alignItems='center';
+ ov.innerHTML='<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Скан QR чека</b><button class="x" type="button" id="qrX">✕</button></div><div class="shb"><video id="qrV" playsinline muted style="width:100%;border-radius:14px;background:#000;min-height:200px"></video><div class="mut sm" id="qrMsg" style="margin:8px 0 12px">Наведите камеру на QR-код на чеке</div><label class="btn sec full">🖼️ Выбрать фото чека<input id="qrF" type="file" accept="image/*" hidden></label></div></div>';
+ document.body.appendChild(ov);
+ var v=ov.querySelector('#qrV'),msg=ov.querySelector('#qrMsg'),f=ov.querySelector('#qrF'),stream=null,stop=false;
+ function close(){stop=true;try{stream&&stream.getTracks().forEach(function(t){t.stop()})}catch(e){}ov.remove()}
+ ov.querySelector('#qrX').onclick=close;
+ ov.addEventListener('click',function(e){if(e.target===ov)close()});
+ loadJsQR().then(function(jsQR){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg.textContent='Камера недоступна. Выберите фото чека ниже.';return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false}).then(function(s){
+   if(stop){s.getTracks().forEach(function(t){t.stop()});return}
+   stream=s;v.srcObject=s;var pl=v.play();if(pl&&pl.catch)pl.catch(function(){});
+   var cv=document.createElement('canvas'),cx=cv.getContext('2d'),last=0;
+   (function tick(ts){
+    if(stop)return;
+    if(v.readyState>=2&&v.videoWidth&&ts-last>120){
+     last=ts;var k=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight));
+     cv.width=Math.round(v.videoWidth*k);cv.height=Math.round(v.videoHeight*k);
+     cx.drawImage(v,0,0,cv.width,cv.height);
+     var d=cx.getImageData(0,0,cv.width,cv.height),r=jsQR(d.data,cv.width,cv.height,{inversionAttempts:'dontInvert'});
+     if(r&&r.data){close();onRaw(r.data);return}
+    }
+    requestAnimationFrame(tick)})(0);
+  }).catch(function(e){msg.textContent=(e&&e.name==='NotAllowedError')?'Нет доступа к камере. Разрешите в Настройки → Safari → Камера или выберите фото чека ниже.':'Камера недоступна. Выберите фото чека ниже.'});
+ }).catch(function(e){msg.textContent=e.message});
+ f.onchange=function(){
+  var file=f.files&&f.files[0];if(!file)return;msg.textContent='Читаю фото…';
+  loadJsQR().then(function(jsQR){
+   var url=URL.createObjectURL(file),im=new Image();
+   im.onload=function(){
+    var found=null;
+    [1600,1000,2400,600].some(function(mx){
+     var k=Math.min(1,mx/Math.max(im.width,im.height)),c=document.createElement('canvas');
+     c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+     var x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);
+     var d=x.getImageData(0,0,c.width,c.height),r=jsQR(d.data,c.width,c.height,{inversionAttempts:'attemptBoth'});
+     if(r&&r.data){found=r.data;return true}return false});
+    URL.revokeObjectURL(url);
+    if(found){close();onRaw(found)}else msg.textContent='QR не найден на фото. Сфотографируйте ближе и ровнее.'};
+   im.onerror=function(){msg.textContent='Не удалось открыть фото'};
+   im.src=url;
+  }).catch(function(e){msg.textContent=e.message});
+ };
+}
 </script>
 </body>
 </html>
