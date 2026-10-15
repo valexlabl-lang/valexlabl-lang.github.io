@@ -68,7 +68,9 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-conte
 nav>div{display:flex;width:100%;max-width:600px}
 nav button{flex:1;padding:9px 0 8px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button i{font-style:normal;font-size:22px}
+nav button{position:relative}
 nav button.on{color:var(--acc);font-weight:700}
+.bdg{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;font-style:normal;line-height:1}
 .fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:32px;box-shadow:var(--sh);z-index:25;display:grid;place-items:center;line-height:1}
 .ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fi .15s}
 @keyframes fi{from{opacity:0}}@keyframes su{from{transform:translateY(40px);opacity:.6}}
@@ -377,11 +379,69 @@ function alerts(car) {
   });
   return a.sort((x, y) => (x.lvl === "over" ? 0 : 1) - (y.lvl === "over" ? 0 : 1));
 }
+function allAlerts() {
+  const out = [];
+  S.cars.forEach((c) => alerts(c).forEach((a) => out.push(Object.assign({ car: c.name }, a))));
+  return out;
+}
+function setBadge(n) {
+  try {
+    const f = n > 0 ? navigator.setAppBadge && navigator.setAppBadge(n) : navigator.clearAppBadge && navigator.clearAppBadge();
+    if (f && f.catch) f.catch(() => {
+    });
+  } catch (e) {
+  }
+}
+function dailyAlert() {
+  if (!S.cars.length || S.settings.alertPopup === false || S.settings.alertDay === today()) return;
+  const al = allAlerts();
+  if (!al.length) return;
+  S.settings.alertDay = today();
+  save();
+  sheet("⚠️ Пора обратить внимание", al.slice(0, 8).map((a) => `<div class="kv"><span>${a.lvl === "over" ? "🔴" : "🟠"} ${esc(a.t)}${S.cars.length > 1 ? ' <span class="mut sm">· ' + esc(a.car) + "</span>" : ""}</span><span class="sm">${esc(a.s)}</span></div>`).join("") + (al.length > 8 ? `<div class="sm mut" style="margin:8px 0">…и ещё ${al.length - 8}</div>` : "") + `<div class="two" style="margin-top:14px"><button class="btn" data-a="tab" data-v="service">Открыть «Сервис»</button><button class="btn sec" data-a="close">Понятно</button></div>`);
+}
+function buildIcs() {
+  const esc2 = (t) => String(t || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  const ymd = (x) => x.replace(/-/g, ""), nd = (x) => iso(new Date(D(x).getTime() + 864e5));
+  const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const ev = [];
+  const add = (uid, date, title, desc, early) => {
+    if (!date || date < today()) return;
+    const al = (early ? ["-P29DT15H"] : []).concat(["-P6DT15H", "-PT15H", "PT9H"]);
+    ev.push(["BEGIN:VEVENT", "UID:" + uid + "@avto-dnevnik", "DTSTAMP:" + stamp, "DTSTART;VALUE=DATE:" + ymd(date), "DTEND;VALUE=DATE:" + ymd(nd(date)), "SUMMARY:" + esc2(title), "DESCRIPTION:" + esc2(desc), "TRANSP:TRANSPARENT"].concat(al.map((t) => "BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:" + esc2(title) + "\r\nTRIGGER:" + t + "\r\nEND:VALARM"), ["END:VEVENT"]).join("\r\n"));
+  };
+  S.cars.forEach((c) => {
+    remList(c).forEach((st) => {
+      const date = st.nextDate || st.est;
+      add("rem-" + st.r.id, date, "🔧 " + st.r.title + " · " + c.name, [dueText(st), st.nextOdo != null ? "Пробег замены: " + km(st.nextOdo) : "", !st.nextDate && st.est ? "Дата прикидочная, по вашему обычному пробегу" : ""].filter(Boolean).join(". "), false);
+    });
+    S.docs.filter((d) => d.carId === c.id).forEach((d) => add("doc-" + d.id, d.expires, "📄 " + d.title + " · " + c.name, "Срок действия до " + fmtDate(d.expires), true));
+  });
+  return { n: ev.length, text: ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//avto-dnevnik//RU", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Дневник авто"].concat(ev, ["END:VCALENDAR"]).join("\r\n") + "\r\n" };
+}
+async function exportIcs() {
+  const r = buildIcs();
+  if (!r.n) return toast("Нет ближайших сроков для календаря");
+  const name = "avto-dnevnik-sroki.ics", blob = new Blob([r.text], { type: "text/calendar;charset=utf-8" });
+  try {
+    const f = new File([blob], name, { type: "text/calendar" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      await navigator.share({ files: [f], title: "Сроки обслуживания" });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") return;
+  }
+  download(blob, name);
+  toast("Файл календаря: " + r.n);
+}
 function render() {
   applyTheme();
   const car = curCar();
   const tabs = [["home", "🏠", "Главная"], ["history", "📋", "История"], ["service", "🔔", "Сервис"], ["stats", "📊", "Статистика"], ["trips", "🚕", "Рейсы"], ["more", "⚙️", "Ещё"]];
-  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "trips" && (tripGet() || {}).state === "run" ? " 🟢" : ""}</button>`).join("");
+  const nAl = allAlerts().length;
+  setBadge(nAl);
+  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "service" && nAl ? '<b class="bdg">' + nAl + "</b>" : ""}${t[0] === "trips" && (tripGet() || {}).state === "run" ? " 🟢" : ""}</button>`).join("");
   $("#fab").style.display = car && (ui.view === "home" || ui.view === "history") ? "grid" : "none";
   $("#top").innerHTML = car ? `<button class="carsel" data-a="cars"><span>🚗 ${esc(car.name)}</span> <small class="mut">▾</small></button><span class="pill">${km(car.odo)}</span>` : `<b style="font-size:18px">🚗 Дневник авто</b>`;
   const views = { home, history, service, stats: statsView, trips: tripsView, more };
@@ -846,6 +906,12 @@ function more() {
  <div style="display:grid;gap:8px"><button class="btn" data-a="exp">💾 Скачать файл-копию (.json)</button><button class="btn sec" data-a="share">📤 Отправить / сохранить в «Файлы»</button>
  <label class="btn sec">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label>
  ${curCar() ? `<button class="btn sec" data-a="csv">📊 Выгрузить историю в CSV (Excel)</button><button class="btn sec" data-a="print">🖨️ Отчёт по авто / PDF</button>` : ""}</div><div class="sm mut" id="usage" style="margin-top:10px"></div></div>
+ <h3>Сигналы напоминаний</h3>
+ <div class="card"><label class="sw"><input type="checkbox" id="alPop" ${S.settings.alertPopup !== false ? "checked" : ""}> Окно «Пора обратить внимание» при первом открытии за день</label>
+ <div class="sm mut" style="margin:6px 0 10px">Красная цифра на вкладке «Сервис» показывается всегда.</div>
+ ${window.Notification && navigator.setAppBadge ? `<button class="btn sec full" data-a="badgeOn" style="margin-bottom:8px">🔴 Значок на иконке приложения${Notification.permission === "granted" ? " · включён" : ""}</button>` : ""}
+ <button class="btn sec full" data-a="icsExport">📅 Добавить сроки в Календарь iPhone</button>
+ <div class="sm mut" style="margin-top:8px">Календарь пришлёт настоящие уведомления: за неделю, за день и в день срока (в 9:00). После замены расходника выгрузите заново, и события обновятся.</div></div>
  <h3>Настройки</h3>
  <div class="card"><div class="two"><div class="f"><label>Валюта</label><input id="cu" value="${esc(S.settings.currency)}" maxlength="4"></div><div class="f"><label>Тема</label><select id="th">${[["auto", "Авто"], ["dark", "Тёмная"], ["light", "Светлая"]].map((t) => `<option value="${t[0]}" ${S.settings.theme === t[0] ? "selected" : ""}>${t[1]}</option>`).join("")}</select></div></div></div>
  <div class="card sm mut"><b style="color:var(--txt)">📲 На экран «Домой» (iPhone):</b> откройте страницу в Safari → «Поделиться» → «На экран „Домой“». Дальше приложение открывается как обычное.</div>
@@ -1803,6 +1869,20 @@ const A = {
       render();
     }
   },
+  icsExport: exportIcs,
+  badgeOn: async () => {
+    try {
+      if (Notification.permission !== "granted") {
+        const p = await Notification.requestPermission();
+        if (p !== "granted") return toast("Разрешение не выдано. Включить: Настройки iPhone → Уведомления");
+      }
+      setBadge(allAlerts().length);
+      render();
+      toast("Значок включён ✓");
+    } catch (e) {
+      toast("Не получилось включить значок");
+    }
+  },
   exp: () => exportJSON(false),
   share: () => exportJSON(true),
   csv: exportCSV,
@@ -1845,6 +1925,10 @@ document.addEventListener("change", (e) => {
   if (t.matches && t.matches("[data-imp]") && t.files[0]) {
     importFile(t.files[0]);
     t.value = "";
+  }
+  if (t.id === "alPop") {
+    S.settings.alertPopup = t.checked;
+    save();
   }
   if (t.id === "tpFrom" || t.id === "tpTo") {
     if (t.value) ui[t.id === "tpFrom" ? "tripFrom" : "tripTo"] = t.value;
@@ -1897,6 +1981,7 @@ function makeIcon() {
     applyTheme();
     render();
     tripTrack();
+    setTimeout(dailyAlert, 700);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden && tripGet() && tripGet().state === "run") {
         tripKeepAwake();
