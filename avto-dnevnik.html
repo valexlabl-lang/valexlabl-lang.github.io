@@ -499,6 +499,15 @@ function chartLine(pts, fmt, color) {
 function stats_() {
   return "";
 }
+function tripsStatCard(car, days) {
+  const cutoff = days ? iso(new Date(Date.now() - days * 864e5)) : "0000-00-00";
+  const l = S.trips.filter((x) => x.carId === car.id && x.date >= cutoff);
+  if (!l.length) return "";
+  const sm = (f) => l.reduce((a, x) => a + (f(x) || 0), 0), kmS = sm((x) => x.km), rev = sm((x) => x.revenue), fuel = sm((x) => x.fuel), prof = sm((x) => x.profit);
+  return `<h3>Рейсы за период</h3><div class="card"><div class="kv"><span>Рейсов</span><span>${l.length} · ${nf1.format(kmS)} км</span></div><div class="kv"><span>Выручка</span><span>${money(rev)}</span></div><div class="kv"><span>Бензин на рейсы</span><span>${money(fuel)}</span></div>
+ <div class="kv"><span><b style="color:var(--txt)">Прибыль</b></span><span style="color:${prof >= 0 ? "var(--ok)" : "var(--bad)"};font-weight:800">${money(prof)}</span></div><div class="kv"><span>Прибыль на 1 км</span><span>${kmS > 0 ? nf1.format(prof / kmS) + " " + cur() : "—"}</span></div>
+ <div class="sm mut" style="margin-top:6px">Отдельно от расходов дневника: в «Всего потрачено» не входит.</div></div>`;
+}
 function tripBase(st, all) {
   const l = st.l100 != null ? st.l100 : all.l100, p = st.ppl != null ? st.ppl : all.ppl;
   return { l, p };
@@ -538,6 +547,7 @@ function statsView() {
  <div class="tile"><div class="l">Пробег за период</div><div class="v">${st.dist != null ? nf0.format(st.dist) : "—"}</div><div class="s">км по записям</div></div><div class="tile"><div class="l">Стоимость 1 км</div><div class="v">${st.perKm != null ? nf1.format(st.perKm) + " " + cur() : "—"}</div></div>
  <div class="tile"><div class="l">Средний расход</div><div class="v">${st.l100 != null ? nf1.format(st.l100) : "—"}</div><div class="s">л / 100 км</div></div><div class="tile"><div class="l">Цена литра (ср.)</div><div class="v">${st.ppl != null ? nf1.format(st.ppl) : "—"}</div><div class="s">${cur()} / л</div></div></div>
  ${tripCard(car, st, all)}
+ ${tripsStatCard(car, ui.period || 0)}
  <h3>Расходы по месяцам</h3><div class="card">${chartMonths(car)}<div class="legend">${Object.entries(CATS).map(([k, c]) => `<span><i style="background:${c.c}"></i>${c.n}</span>`).join("")}</div></div>
  <h3>На что уходят деньги</h3><div class="card">${cats.length ? cats.map(([k, v]) => `<div class="hbar"><div class="top"><span>${CATS[k].i} ${CATS[k].n}</span><b>${money(v)} <span class="mut sm">${Math.round(v / st.total * 100)}%</span></b></div><div class="b"><div style="width:${v / cats[0][1] * 100}%;background:${CATS[k].c}"></div></div></div>`).join("") : '<div class="empty" style="padding:12px">Нет данных за период</div>'}</div>
  <h3>Расход топлива, л/100 км</h3><div class="card">${chartLine(segs.slice(-20).map((s) => ({ y: s.l100 })), (v) => nf1.format(v), "#ffb02e")}</div>
@@ -830,7 +840,7 @@ function tripsView() {
   return `<h3>Рейсы · ${esc(car.name)}</h3>${top}
  <div class="chips">${[[1, "Сегодня"], [7, "7 дней"], [30, "30 дней"], [0, "Всё"]].map((p) => `<button class="chip ${P === p[0] ? "on" : ""}" data-a="tripP" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
  ${tiles}
- ${list.length ? `<div class="card" style="padding:4px 14px">${rows}</div>` : `<div class="card empty" style="padding:20px">За этот период рейсов нет.</div>`}
+ ${list.length ? `<button class="card flex between" style="width:100%;text-align:left" data-a="tripToggle"><b>📋 История рейсов (${list.length})</b><span class="mut" style="font-size:18px">${ui.tripOpen ? "▴" : "▾"}</span></button>${ui.tripOpen ? `<div class="card" style="padding:4px 14px">${rows}</div>` : ""}` : `<div class="card empty" style="padding:20px">За этот период рейсов нет.</div>`}
  <button class="btn sec full" data-a="tripAdd">＋ Добавить рейс вручную</button>
  <p class="mut sm" style="text-align:center">Рейсы хранятся отдельно и не попадают в записи дневника.</p>`;
 }
@@ -1686,6 +1696,10 @@ const A = {
     scrollTo(0, 0);
   },
   addRec: (d) => recForm(null, { type: d.t, item: d.item }),
+  tripToggle: () => {
+    ui.tripOpen = !ui.tripOpen;
+    render();
+  },
   tripP: (d) => {
     ui.tripP = +d.p;
     render();
