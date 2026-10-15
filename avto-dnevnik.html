@@ -568,7 +568,7 @@ function calCard() {
 }
 function service() {
   const car = curCar(), rl = remList(car), docs = S.docs.filter((d) => d.carId === car.id).sort((a, b) => a.expires.localeCompare(b.expires));
-  return `<h3>Календарь сроков</h3>${calCard()}
+  return `<button class="card flex between" style="width:100%;text-align:left" data-a="calToggle"><b>📅 Календарь сроков</b><span class="mut" style="font-size:18px">${ui.calOpen ? "▴" : "▾"}</span></button>${ui.calOpen ? calCard() : ""}
  <h3>Расходники и интервалы <button data-a="remAdd">+ Добавить</button></h3>
  ${rl.length ? rl.map(remCard).join("") : `<div class="card empty"><b>🔔</b>Задайте интервалы замены (масло, фильтры, ГРМ…) — приложение покажет, что и когда менять.<div style="margin-top:12px;display:grid;gap:8px"><button class="btn" data-a="remDefaults">Добавить стандартный набор</button><button class="btn sec" data-a="remAdd">Добавить свой</button></div></div>`}
  <h3>Документы и сроки <button data-a="docAdd">+ Добавить</button></h3>
@@ -1813,6 +1813,10 @@ const A = {
     scrollTo(0, 0);
   },
   addRec: (d) => recForm(null, { type: d.t, item: d.item }),
+  calToggle: () => {
+    ui.calOpen = !ui.calOpen;
+    render();
+  },
   calNav: (d) => {
     const td = today(), cur0 = ui.calM || td.slice(0, 7);
     if (+d.dir === 0) {
