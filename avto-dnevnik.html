@@ -696,35 +696,33 @@ function recForm(id, pre = {}) {
     const h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) * Math.sin(y / 2);
     return 2 * R * Math.asin(Math.sqrt(h));
   };
-  const OVP = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
-  const overpass = async (q) => {
-    let err = new Error("no server");
-    for (const u of OVP) {
-      try {
-        const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
-        const res = await fetch(u, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ac.signal });
-        clearTimeout(tm);
-        if (!res.ok) throw new Error("http " + res.status);
-        return await res.json();
-      } catch (e) {
-        err = e;
-      }
+  const OVP = ["https://overpass-api.de/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  const fetchOne = async (u, q) => {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 14000);
+    try {
+      const res = await fetch(u, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ac.signal });
+      if (!res.ok) throw new Error("http " + res.status);
+      return await res.json();
+    } finally {
+      clearTimeout(tm);
     }
-    throw err;
   };
+  const overpass = (q) => new Promise((resolve, reject) => {
+    let left = OVP.length;
+    OVP.forEach((u) => fetchOne(u, q).then(resolve, (e) => {
+      if (--left === 0) reject(e);
+    }));
+  });
   const findAzs = async (lat, lon) => {
-    for (const rad of [150, 400]) {
-      const q = `[out:json][timeout:12];(node(around:${rad},${lat},${lon})[amenity=fuel];way(around:${rad},${lat},${lon})[amenity=fuel];);out center tags;`;
-      const j = await overpass(q);
-      const list = (j.elements || []).map((e) => {
-        const t = e.tags || {};
-        const la = e.lat != null ? e.lat : e.center && e.center.lat, lo = e.lon != null ? e.lon : e.center && e.center.lon;
-        return la == null || lo == null ? null : { name: t.brand || t.name || t.operator || "АЗС", dist: Math.round(hav(lat, lon, la, lo)) };
-      }).filter(Boolean).sort((a, b) => a.dist - b.dist);
-      if (list.length) return list;
-    }
-    return [];
+    const q = `[out:json][timeout:12];(node(around:600,${lat},${lon})[amenity=fuel];way(around:600,${lat},${lon})[amenity=fuel];);out center tags;`;
+    const j = await overpass(q);
+    return (j.elements || []).map((e) => {
+      const t = e.tags || {};
+      const la = e.lat != null ? e.lat : e.center && e.center.lat, lo = e.lon != null ? e.lon : e.center && e.center.lon;
+      return la == null || lo == null ? null : { name: t.brand || t.name || t.operator || "АЗС", dist: Math.round(hav(lat, lon, la, lo)) };
+    }).filter(Boolean).sort((a, b) => a.dist - b.dist);
   };
+  const azsChips = (arr, title) => '<span class="mut sm" style="width:100%">' + title + '</span>' + arr.map((x) => `<button type="button" class="chip" data-azs="${esc(x.name)}">${esc(x.name === "АЗС" ? "АЗС без названия" : x.name)} · ${x.dist} м</button>`).join("");
   azsBtn.onclick = () => {
     if (!navigator.geolocation) return toast("Геолокация недоступна в этом браузере");
     azsBtn.disabled = true;
@@ -743,15 +741,18 @@ function recForm(id, pre = {}) {
           seen.add(k);
           return true;
         }).slice(0, 5);
-        if (!list.length) toast("АЗС рядом не найдена, впишите вручную");
-        else {
+        if (!list.length) toast("В радиусе 600 м АЗС не найдено, впишите вручную");
+        else if (list[0].dist <= 200) {
           E.place.value = list[0].name;
           autoPlace = E.place.value;
-          if (list.length > 1) azsList.innerHTML = '<span class="mut sm" style="width:100%">Рядом также:</span>' + list.slice(1).map((x) => `<button type="button" class="chip" data-azs="${esc(x.name)}">${esc(x.name)} · ${x.dist} м</button>`).join("");
+          if (list.length > 1) azsList.innerHTML = azsChips(list.slice(1), "Рядом также:");
           toast("📍 " + list[0].name + " · " + list[0].dist + " м");
+        } else {
+          azsList.innerHTML = azsChips(list, "Рядом АЗС нет. Ближайшие, нажмите нужную:");
+          toast("Ближайшая АЗС дальше 200 м: " + list[0].dist + " м");
         }
       } catch (e) {
-        toast("Не удалось найти АЗС: нет связи с картой");
+        toast("Карта не ответила (" + (e && e.message || "ошибка") + "). Попробуйте ещё раз");
       }
       done();
     }, (err) => {
