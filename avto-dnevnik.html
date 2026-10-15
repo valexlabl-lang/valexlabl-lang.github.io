@@ -225,7 +225,7 @@ async function idbSet(k, v) {
     t.onerror = () => rej(t.error);
   });
 }
-const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], places: [], active: null });
+const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], places: [], trips: [], active: null });
 let S = blank(), saveT = null;
 function save() {
   clearTimeout(saveT);
@@ -380,14 +380,15 @@ function alerts(car) {
 function render() {
   applyTheme();
   const car = curCar();
-  const tabs = [["home", "🏠", "Главная"], ["history", "📋", "История"], ["service", "🔔", "Сервис"], ["stats", "📊", "Статистика"], ["more", "⚙️", "Ещё"]];
-  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}</button>`).join("");
+  const tabs = [["home", "🏠", "Главная"], ["history", "📋", "История"], ["service", "🔔", "Сервис"], ["stats", "📊", "Статистика"], ["trips", "🚕", "Рейсы"], ["more", "⚙️", "Ещё"]];
+  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "trips" && (tripGet() || {}).state === "run" ? " 🟢" : ""}</button>`).join("");
   $("#fab").style.display = car && (ui.view === "home" || ui.view === "history") ? "grid" : "none";
   $("#top").innerHTML = car ? `<button class="carsel" data-a="cars"><span>🚗 ${esc(car.name)}</span> <small class="mut">▾</small></button><span class="pill">${km(car.odo)}</span>` : `<b style="font-size:18px">🚗 Дневник авто</b>`;
-  const views = { home, history, service, stats: statsView, more };
+  const views = { home, history, service, stats: statsView, trips: tripsView, more };
   $("#view").innerHTML = !car && ui.view !== "more" ? welcome() : views[ui.view]();
   if (ui.view === "history") bindHist();
   if (ui.view === "stats") tripCalc();
+  if (ui.view === "trips") tripUI();
 }
 function welcome() {
   return `<div class="empty" style="padding-top:60px"><b>🚗</b><h2 style="color:var(--txt);margin:6px 0">Дневник вашего авто</h2><p>Добавьте машину — и записывайте замены расходников, ремонты, заправки и расходы. Всё хранится на телефоне.</p><div style="display:grid;gap:10px;margin-top:20px"><button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button><label class="btn sec full">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label><button class="btn sec full" data-a="demo">✨ Посмотреть на демо-данных</button></div></div>`;
@@ -544,6 +545,296 @@ function statsView() {
  <div class="card"><div class="kv"><span>Записей всего</span><span>${all.rs.length}</span></div><div class="kv"><span>Потрачено за всё время</span><span>${money(all.total)}</span></div></div>`;
 }
 window.stats_view = statsView;
+/* ===== Рейсы: отдельная вкладка, данные хранятся отдельно от записей дневника ===== */
+const TRIP_KEY = "cd_trip";
+let tripWatch = null, tripTimer = null, wakeLock = null;
+const tripGet = () => {
+  try {
+    return JSON.parse(localStorage.getItem(TRIP_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+};
+const tripPut = (t) => {
+  try {
+    if (t) localStorage.setItem(TRIP_KEY, JSON.stringify(t));
+    else localStorage.removeItem(TRIP_KEY);
+  } catch (e) {
+  }
+};
+const havM = (a, b, c, d) => {
+  const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
+  const h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) * Math.sin(y / 2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+const r1 = (x) => Math.round(x * 10) / 10;
+const r2 = (x) => Math.round(x * 100) / 100;
+function tripDefaults(car) {
+  const lf = S.records.filter((x) => x.carId === car.id && x.type === "fuel" && x.liters > 0 && x.cost > 0).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0))[0];
+  const st = stats(car, 0);
+  return {
+    price: lf ? r2(lf.cost / lf.liters) : S.settings.tripPrice || null,
+    l100: st.l100 != null ? r1(st.l100) : S.settings.tripL100 || null,
+    priceFromDiary: !!lf,
+    l100FromDiary: st.l100 != null
+  };
+}
+function tripMath(km2, rev, price, l100, durMs) {
+  const liters = l100 != null && km2 != null ? km2 * l100 / 100 : null;
+  const fuel = liters != null && price != null ? liters * price : null;
+  const profit = rev != null ? rev - (fuel || 0) : null;
+  return { liters, fuel, profit, perKm: profit != null && km2 > 0 ? profit / km2 : null, perHour: profit != null && durMs > 6e4 ? profit / (durMs / 36e5) : null };
+}
+const hms = (ms) => {
+  const s = Math.max(0, Math.floor(ms / 1e3));
+  return pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s % 3600 / 60)) + ":" + pad(s % 60);
+};
+const durTxt = (ms) => {
+  const m = Math.round(ms / 6e4);
+  return m < 1 ? "—" : m < 60 ? m + " мин" : Math.floor(m / 60) + " ч " + pad(m % 60) + " мин";
+};
+function tripKeepAwake() {
+  try {
+    if (navigator.wakeLock && !wakeLock) {
+      navigator.wakeLock.request("screen").then((l) => {
+        wakeLock = l;
+        l.addEventListener("release", () => {
+          wakeLock = null;
+        });
+      }).catch(() => {
+      });
+    }
+  } catch (e) {
+  }
+}
+function tripHalt() {
+  try {
+    if (tripWatch != null) navigator.geolocation.clearWatch(tripWatch);
+  } catch (e) {
+  }
+  tripWatch = null;
+  clearInterval(tripTimer);
+  tripTimer = null;
+  try {
+    wakeLock && wakeLock.release();
+  } catch (e) {
+  }
+  wakeLock = null;
+}
+function tripFix(pos) {
+  const t = tripGet();
+  if (!t || t.state !== "run") return;
+  const c = pos.coords, ts = pos.timestamp || Date.now();
+  t.gpsErr = null;
+  t.acc = c.accuracy;
+  t.fixT = Date.now();
+  if (c.accuracy <= 50) {
+    if (!t.last) {
+      t.last = { lat: c.latitude, lon: c.longitude, t: ts };
+    } else {
+      const d = havM(t.last.lat, t.last.lon, c.latitude, c.longitude), dt = (ts - t.last.t) / 1e3;
+      if (dt > 0) {
+        const v = d / dt, thr = Math.max(8, c.accuracy * 0.5);
+        const glitch = v > 70 && dt < 30;
+        if (!glitch && (d >= thr || c.speed != null && c.speed > 2 && d >= 4)) {
+          t.km += d / 1e3;
+          t.last = { lat: c.latitude, lon: c.longitude, t: ts };
+        }
+      }
+    }
+  }
+  tripPut(t);
+  tripUI();
+}
+function tripErr(e) {
+  const t = tripGet();
+  if (!t || t.state !== "run") return;
+  t.gpsErr = e && e.code === 1 ? "Нет доступа к геолокации. Разрешите её в настройках Safari" : "GPS недоступен";
+  tripPut(t);
+  tripUI();
+}
+function tripTrack() {
+  const t = tripGet();
+  if (!t || t.state !== "run" || tripWatch != null) return;
+  if (navigator.geolocation) {
+    tripWatch = navigator.geolocation.watchPosition(tripFix, tripErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 3e4 });
+  } else {
+    t.gpsErr = "Геолокация недоступна в этом браузере";
+    tripPut(t);
+  }
+  tripKeepAwake();
+  clearInterval(tripTimer);
+  tripTimer = setInterval(tripUI, 1e3);
+}
+function tripUI() {
+  const t = tripGet();
+  if (!t) return;
+  const e = (id) => document.getElementById(id);
+  const now = t.state === "run" ? Date.now() : t.end || Date.now();
+  if (e("tpTime")) e("tpTime").textContent = hms(now - t.start);
+  if (e("tpKm")) e("tpKm").textContent = nf1.format(t.km);
+  if (e("tpGps")) {
+    const age = t.fixT ? Math.round((Date.now() - t.fixT) / 1e3) : null;
+    e("tpGps").textContent = t.state !== "run" ? "Слежение остановлено" : t.gpsErr ? t.gpsErr : t.fixT ? "GPS: точность ±" + Math.round(t.acc) + " м" + (age > 20 ? " · сигнала нет " + age + " с" : "") : "Ищу спутники…";
+    e("tpGps").style.color = t.gpsErr ? "var(--bad)" : "";
+  }
+  if (e("tpFuel")) {
+    const m = tripMath(t.km, null, t.price, t.l100, 0);
+    e("tpFuel").textContent = m.fuel != null ? nf1.format(m.liters) + " л ≈ " + money(m.fuel) : "укажите цену и расход";
+  }
+}
+function tripSheet(o) {
+  const t = o.t, car = curCar();
+  const num = (v) => v != null && v !== "" ? String(r2(v)) : "";
+  const body = `<form id="tf">
+ ${fld("Сумма за рейс, " + cur(), `<input name="rev" inputmode="decimal" value="${num(t.revenue)}" placeholder="сколько заплатили" style="font-size:22px;font-weight:700">`)}
+ <div class="two">${fld("Километры", `<input name="km" inputmode="decimal" value="${num(t.km)}">`)}${o.date ? fld("Дата", `<input type="date" name="date" value="${t.date}">`) : fld("В пути", `<div class="mut" style="padding:12px 0">${durTxt(t.durMs)}</div>`)}</div>
+ <div class="two">${fld("Бензин, " + cur() + "/л", `<input name="price" inputmode="decimal" value="${num(t.price)}">`)}${fld("Расход, л/100 км", `<input name="l100" inputmode="decimal" value="${num(t.l100)}">`)}</div>
+ ${fld("Заметка (клиент, маршрут)", `<input name="note" value="${esc(t.note || "")}">`)}
+ <div id="tfRes" class="card" style="margin:0 0 12px"></div>
+ <button class="btn full" type="submit">Сохранить рейс</button>
+ ${o.onDelete ? '<button type="button" class="btn red full" id="tfDel" style="margin-top:8px">🗑️ ' + (o.delText || "Удалить рейс") + "</button>" : ""}</form>`;
+  const ov = sheet(o.title, body), F = $("#tf", ov), E = F.elements;
+  const calc = () => {
+    const kmv = pn(E.km.value), rev = pn(E.rev.value), m = tripMath(kmv || 0, rev != null ? rev : 0, pn(E.price.value), pn(E.l100.value), t.durMs || 0);
+    const col = m.profit == null ? "" : m.profit >= 0 ? "var(--ok)" : "var(--bad)";
+    $("#tfRes", ov).innerHTML = `<div class="kv"><span>Бензин на рейс</span><span>${m.fuel != null ? nf1.format(m.liters) + " л ≈ " + money(m.fuel) : "укажите цену и расход"}</span></div>
+ <div class="kv"><span><b style="color:var(--txt)">Прибыль</b></span><span style="color:${col};font-size:20px;font-weight:800">${m.profit != null ? money(m.profit) : "—"}</span></div>
+ <div class="kv"><span>Прибыль на 1 км</span><span>${m.perKm != null ? nf1.format(m.perKm) + " " + cur() : "—"}</span></div>
+ ${m.perHour != null ? `<div class="kv"><span>Прибыль в час</span><span>${money(m.perHour)}</span></div>` : ""}`;
+  };
+  F.oninput = calc;
+  calc();
+  F.onsubmit = (e) => {
+    e.preventDefault();
+    const kmv = pn(E.km.value) || 0, rev = pn(E.rev.value) || 0, price = pn(E.price.value), l100 = pn(E.l100.value), m = tripMath(kmv, rev, price, l100, t.durMs || 0);
+    if (price != null && !S.settings.tripPrice) S.settings.tripPrice = price;
+    if (l100 != null && !S.settings.tripL100) S.settings.tripL100 = l100;
+    o.onSave({ km: r1(kmv), revenue: rev, price, l100, liters: m.liters != null ? r2(m.liters) : null, fuel: m.fuel != null ? r2(m.fuel) : null, profit: r2(m.profit), note: E.note.value.trim(), date: o.date ? E.date.value || t.date : t.date });
+  };
+  if (o.onDelete) $("#tfDel", ov).onclick = o.onDelete;
+  if (!o.noFocus) setTimeout(() => {
+    try {
+      E.rev.focus();
+    } catch (e) {
+    }
+  }, 350);
+}
+function tripFinish() {
+  const t = tripGet(), car = curCar();
+  if (!t) return;
+  const dur = (t.end || Date.now()) - t.start;
+  tripSheet({
+    title: "Рейс завершён",
+    t: { km: r1(t.km), revenue: "", price: t.price, l100: t.l100, note: "", date: iso(new Date(t.start)), durMs: dur },
+    delText: "Отменить рейс (не сохранять)",
+    onDelete: () => {
+      if (!confirm("Не сохранять этот рейс?")) return;
+      tripHalt();
+      tripPut(null);
+      closeSheet();
+      render();
+    },
+    onSave: (v) => {
+      tripHalt();
+      S.trips.unshift(Object.assign({ id: t.id, carId: t.carId, start: t.start, end: t.end || Date.now(), durMs: dur }, v));
+      tripPut(null);
+      save();
+      closeSheet();
+      render();
+      toast("🚕 Рейс сохранён · прибыль " + money(v.profit));
+    }
+  });
+}
+function tripEdit(id) {
+  const x = S.trips.find((r) => r.id === id);
+  if (!x) return;
+  tripSheet({
+    title: "Рейс " + fmtDate(x.date),
+    t: x,
+    date: true,
+    noFocus: true,
+    onDelete: () => {
+      if (!confirm("Удалить этот рейс?")) return;
+      S.trips = S.trips.filter((r) => r.id !== id);
+      save();
+      closeSheet();
+      render();
+    },
+    onSave: (v) => {
+      Object.assign(x, v);
+      save();
+      closeSheet();
+      render();
+      toast("Сохранено");
+    }
+  });
+}
+function tripAddManual() {
+  const car = curCar(), d = tripDefaults(car);
+  tripSheet({
+    title: "Рейс вручную",
+    t: { km: "", revenue: "", price: d.price, l100: d.l100, note: "", date: today(), durMs: 0 },
+    date: true,
+    onSave: (v) => {
+      S.trips.unshift(Object.assign({ id: uid(), carId: car.id, start: (/* @__PURE__ */ new Date(v.date + "T12:00:00")).getTime(), end: (/* @__PURE__ */ new Date(v.date + "T12:00:00")).getTime(), durMs: 0, manual: true }, v));
+      S.trips.sort((a, b) => b.start - a.start);
+      save();
+      closeSheet();
+      render();
+      toast("🚕 Рейс добавлен");
+    }
+  });
+}
+function tripsView() {
+  const car = curCar();
+  if (!car) return '<div class="card empty"><b>🚕</b>Сначала добавьте автомобиль во вкладке «Ещё».</div>';
+  const t = tripGet(), d = tripDefaults(car);
+  let top = "";
+  if (t && t.state === "run") {
+    top = `<div class="card" style="text-align:center"><span class="pill ok">● Рейс идёт</span>
+ <div id="tpTime" style="font-size:38px;font-weight:800;margin:8px 0 0;font-variant-numeric:tabular-nums">00:00:00</div>
+ <div style="font-size:56px;font-weight:800;line-height:1.1;margin-top:6px"><span id="tpKm">0</span><span style="font-size:22px"> км</span></div>
+ <div class="sm mut" id="tpGps" style="margin-top:4px">Ищу спутники…</div></div>
+ <div class="card"><div class="two"><div class="f"><label>Бензин, ${cur()}/л</label><input id="tpPrice" inputmode="decimal" value="${t.price != null ? t.price : ""}"></div><div class="f"><label>Расход, л/100 км</label><input id="tpL100" inputmode="decimal" value="${t.l100 != null ? t.l100 : ""}"></div></div>
+ <div class="kv"><span>Бензин на рейс (оценка)</span><span id="tpFuel">—</span></div></div>
+ <button class="btn red full" style="padding:17px;font-size:19px;margin-bottom:8px" data-a="tripStop">⏹ Стоп</button>
+ <div class="sm mut" style="margin-bottom:14px">Держите экран включён и приложение открытым: когда iPhone блокируется, GPS перестаёт записывать путь. Километры можно поправить при завершении.</div>`;
+  } else if (t && t.state === "stopped") {
+    top = `<div class="card" style="text-align:center"><span class="pill soon">Рейс остановлен</span>
+ <div style="font-size:30px;font-weight:800;margin:8px 0">${nf1.format(t.km)} км · <span id="tpTime">${hms((t.end || Date.now()) - t.start)}</span></div>
+ <div class="sm mut">Осталось ввести сумму за рейс</div></div>
+ <div class="two" style="margin-bottom:14px"><button class="btn" data-a="tripFinish">✅ Завершить</button><button class="btn red" data-a="tripCancel">Отменить</button></div>`;
+  } else {
+    const need = [];
+    if (d.price == null) need.push(`<div class="f"><label>Цена бензина, ${cur()}/л</label><input id="tpPrice0" inputmode="decimal" placeholder="например 62"></div>`);
+    if (d.l100 == null) need.push(`<div class="f"><label>Расход, л/100 км</label><input id="tpL1000" inputmode="decimal" placeholder="например 10,5"></div>`);
+    top = `<div class="card"><button class="btn full" style="padding:20px;font-size:21px" data-a="tripStart">▶ Старт рейса</button>
+ <div class="sm mut" style="margin-top:10px">Бензин: <b style="color:var(--txt)">${d.price != null ? nf2.format(d.price) + " " + cur() + "/л" : "не задан"}</b>${d.priceFromDiary ? " (последняя заправка)" : ""}<br>Расход: <b style="color:var(--txt)">${d.l100 != null ? nf1.format(d.l100) + " л/100 км" : "не задан"}</b>${d.l100FromDiary ? " (средний по дневнику)" : ""}</div>
+ ${need.length ? '<div class="two" style="margin-top:10px">' + need.join("") + "</div>" : ""}
+ <div class="sm mut" style="margin-top:8px">Километры считаются по GPS от места старта. Маршрут не нужен.</div></div>`;
+  }
+  const P = ui.tripP != null ? ui.tripP : 30, cutoff = P ? iso(new Date(Date.now() - (P - 1) * 864e5)) : "0000-00-00";
+  const all = S.trips.filter((x) => x.carId === car.id), list = all.filter((x) => x.date >= cutoff);
+  const sum = (f) => list.reduce((s, x) => s + (f(x) || 0), 0);
+  const kmS = sum((x) => x.km), rev = sum((x) => x.revenue), fuel = sum((x) => x.fuel), prof = sum((x) => x.profit);
+  const timed = list.filter((x) => x.durMs > 6e4), hrs = timed.reduce((s, x) => s + x.durMs / 36e5, 0), profT = timed.reduce((s, x) => s + (x.profit || 0), 0);
+  const col = prof >= 0 ? "var(--ok)" : "var(--bad)";
+  const tiles = list.length ? `<div class="tiles"><div class="tile"><div class="l">Рейсов</div><div class="v">${list.length}</div><div class="s">${nf1.format(kmS)} км</div></div><div class="tile"><div class="l">Выручка</div><div class="v">${money(rev)}</div></div>
+ <div class="tile"><div class="l">Бензин</div><div class="v">${money(fuel)}</div></div><div class="tile"><div class="l">Прибыль</div><div class="v" style="color:${col}">${money(prof)}</div></div>
+ <div class="tile"><div class="l">Прибыль на 1 км</div><div class="v">${kmS > 0 ? nf1.format(prof / kmS) + " " + cur() : "—"}</div></div><div class="tile"><div class="l">Прибыль в час</div><div class="v">${hrs > 0 ? money(profT / hrs) : "—"}</div></div></div>` : "";
+  const rows = list.slice(0, 60).map((x) => {
+    const tm = x.manual ? "" : " " + pad(new Date(x.start).getHours()) + ":" + pad(new Date(x.start).getMinutes());
+    return `<button class="rec" data-a="tripOpen" data-id="${x.id}"><div class="ic" style="background:var(--card2)">🚕</div><div class="m"><div class="t">${fmtDate(x.date)}${tm} · ${nf1.format(x.km)} км</div><div class="s">${esc(x.note || "")}${x.note ? " · " : ""}бензин ${money(x.fuel)} · ${money(x.revenue)}</div></div><div class="c" style="color:${x.profit >= 0 ? "var(--ok)" : "var(--bad)"}">${money(x.profit)}</div></button>`;
+  }).join("");
+  return `<h3>Рейсы · ${esc(car.name)}</h3>${top}
+ <div class="chips">${[[1, "Сегодня"], [7, "7 дней"], [30, "30 дней"], [0, "Всё"]].map((p) => `<button class="chip ${P === p[0] ? "on" : ""}" data-a="tripP" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ ${tiles}
+ ${list.length ? `<div class="card" style="padding:4px 14px">${rows}</div>` : `<div class="card empty" style="padding:20px">За этот период рейсов нет.</div>`}
+ <button class="btn sec full" data-a="tripAdd">＋ Добавить рейс вручную</button>
+ <p class="mut sm" style="text-align:center">Рейсы хранятся отдельно и не попадают в записи дневника.</p>`;
+}
+
 function more() {
   const est = S.cars.length ? "" : "";
   return `<h3>Гараж <button data-a="carAdd">+ Авто</button></h3>
@@ -632,6 +923,297 @@ function allItems(type) {
   S.records.filter((r) => r.carId === car.id && r.type === type).forEach((r) => (r.items || []).forEach(add));
   return [...set.values()];
 }
+/* ===== Голосовой ввод заправки: разбор свободной русской фразы ===== */
+var VW_U = { ноль: 0, нуль: 0, один: 1, одна: 1, одну: 1, одного: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9, десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15, шестнадцать: 16, семнадцать: 17, восемнадцать: 18, девятнадцать: 19 };
+var VW_T = { двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50, шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90 };
+var VW_H = { сто: 100, двести: 200, триста: 300, четыреста: 400, пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900 };
+var VW_BRANDS = [["лукойл", "Лукойл"], ["роснефт", "Роснефть"], ["газпромнефт", "Газпромнефть"], ["газпром", "Газпром"], ["шелл", "Shell"], ["shell", "Shell"], ["тейбол", "Teboil"], ["teboil", "Teboil"], ["татнефт", "Татнефть"], ["нефтьмагистраль", "Нефтьмагистраль"], ["тнк", "ТНК"], ["бипи", "BP"], ["несте", "Neste"], ["нефтика", "Нефтика"], ["лидер", "Лидер"], ["петроль", "Петроль"], ["трасса", "Трасса"]];
+function vwTok(text) {
+  var s = String(text || "").toLowerCase().replace(/ё/g, "е").replace(/₽/g, " руб ").replace(/(\d)[,.](\d)/g, "$1.$2").replace(/(\d)\s+(\d{3})(?!\d)/g, "$1$2").replace(/(\d)\s+(\d{3})(?!\d)/g, "$1$2");
+  return s.split(/[^0-9a-zа-я.]+/).map(function(t) {
+    return t.replace(/^\.+|\.+$/g, "");
+  }).filter(Boolean);
+}
+function vwWordNum(tk, i) {
+  var n = tk.length, j = i, tot = 0, cur = 0, st = 0, any = false, th = false;
+  while (j < n) {
+    var w = tk[j];
+    if (w in VW_H && st === 0) {
+      cur += VW_H[w];
+      st = 1;
+    } else if (w in VW_T && st <= 1) {
+      cur += VW_T[w];
+      st = 2;
+    } else if (w in VW_U && (st === 0 || st === 1 || st === 2 && VW_U[w] < 10)) {
+      if (VW_U[w] >= 10 && st === 2) break;
+      cur += VW_U[w];
+      st = 3;
+    } else if (/^тысяч/.test(w) && !th && (cur > 0 || !any)) {
+      tot += (cur || 1) * 1e3;
+      cur = 0;
+      st = 0;
+      th = true;
+    } else break;
+    any = true;
+    j++;
+  }
+  return any ? { v: tot + cur, end: j - 1 } : null;
+}
+function vwNums(tk) {
+  var out = [], i = 0, n = tk.length;
+  while (i < n) {
+    var t = tk[i];
+    if (/^\d+(\.\d+)?$/.test(t)) {
+      out.push({ v: parseFloat(t), a: i, b: i });
+      i++;
+      continue;
+    }
+    if (t === "полтора" || t === "полторы") {
+      out.push({ v: 1.5, a: i, b: i });
+      i++;
+      continue;
+    }
+    var w = vwWordNum(tk, i);
+    if (!w) {
+      i++;
+      continue;
+    }
+    var v = w.v, b = w.end, nx = tk[b + 1];
+    if (nx && /^(целых|целая|целое|запятая|точка)$/.test(nx)) {
+      var s2 = /^\d+$/.test(tk[b + 2] || "") ? { v: parseFloat(tk[b + 2]), end: b + 2 } : vwWordNum(tk, b + 2);
+      if (s2) {
+        var den = String(Math.floor(s2.v)).length, un = tk[s2.end + 1], e2 = s2.end;
+        if (un && /^десят/.test(un)) {
+          den = 1;
+          e2++;
+        } else if (un && /^сот/.test(un)) {
+          den = 2;
+          e2++;
+        }
+        v += s2.v / Math.pow(10, den);
+        b = e2;
+      }
+    } else if (nx === "с" && /^половин/.test(tk[b + 2] || "")) {
+      v += 0.5;
+      b += 2;
+    }
+    out.push({ v: v, a: i, b: b });
+    i = b + 1;
+  }
+  return out;
+}
+function parseFuelSpeech(text, ctx) {
+  ctx = ctx || {};
+  var tk = vwTok(text), nums = vwNums(tk), res = { liters: null, price: null, sum: null, odo: null, full: null, place: null };
+  var raw = tk.join(" ");
+  var ODO = /^(пробег[а-я]*|одометр[а-я]*|спидометр[а-я]*|счетчик[а-я]*|показывает|показания|километраж[а-я]*)$/;
+  var has = function(arr, re) {
+    return arr.some(function(x) {
+      return re.test(x);
+    });
+  };
+  for (var q = 0; q < nums.length - 1; q++) {
+    var A1 = nums[q], B1 = nums[q + 1];
+    if (B1.a === A1.b + 1 && A1.v >= 1 && A1.v < 1e3 && B1.v >= 1 && B1.v < 1e3 && Math.floor(A1.v) === A1.v && Math.floor(B1.v) === B1.v) {
+      var pr = tk.slice(Math.max(0, A1.a - 3), A1.a), pt = tk[B1.b + 1] || "";
+      if (has(pr, ODO) || /^(км|километр)/.test(pt)) {
+        nums.splice(q, 2, { v: A1.v * 1e3 + B1.v, a: A1.a, b: B1.b });
+      }
+    }
+  }
+  var used = [], money = null;
+  nums.forEach(function(n, idx) {
+    var p1 = tk[n.a - 1] || "", p3 = tk.slice(Math.max(0, n.a - 3), n.a), a3 = tk.slice(n.b + 1, n.b + 4), unit = a3[0] || "";
+    if (/^(л|лит|литр[а-я]*)$/.test(unit) && !(has(p3, ODO) && n.v >= 1e3)) {
+      if (res.liters == null) res.liters = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^коп/.test(unit)) {
+      if (money && res[money] != null) res[money] = Math.round((res[money] + n.v / 100) * 100) / 100;
+      used[idx] = 1;
+      return;
+    }
+    if (unit === "за" && /^литр/.test(a3[1] || "")) {
+      if (res.price == null) res.price = n.v;
+      money = "price";
+      used[idx] = 1;
+      return;
+    }
+    if (/^(руб|рубл[а-я]*|р)$/.test(unit)) {
+      var a6 = tk.slice(n.b + 1, n.b + 7), zi = a6.indexOf("за"), perL = zi >= 0 && /^литр/.test(a6[zi + 1] || "") || has(p3, /^(по|цена|цену|ценой|стоимость|стоимостью)$/);
+      var key = perL || n.v < 150 ? "price" : "sum";
+      if (res[key] == null) res[key] = n.v;
+      money = key;
+      used[idx] = 1;
+      return;
+    }
+    if (/^(км|километр[а-я]*|кило[а-я]*)$/.test(unit) || has(p3, ODO)) {
+      if (res.odo == null) res.odo = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^литр[а-я]*$/.test(p1) && res.liters == null && n.v < 1e3) {
+      res.liters = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^(по|цена|цену|ценой|стоимость|стоимостью|литр|литра)$/.test(p1) || p1 === "за" && /^литр/.test(tk[n.a - 2] || "")) {
+      if (res.price == null) res.price = n.v;
+      money = "price";
+      used[idx] = 1;
+      return;
+    }
+    if (has(p3, /^(сумма|сумму|суммой|итого|всего|заплатил[а-я]*|оплатил[а-я]*|отдал[а-я]*|чек|чека|выбило|вышло|вышла|получилось|списали|списалось)$/) || p1 === "на" && n.v > 99 && !/^(км|килом)/.test(unit)) {
+      if (res.sum == null) res.sum = n.v;
+      money = "sum";
+      used[idx] = 1;
+    }
+  });
+  var carOdo = ctx.odo || 0, small = [];
+  nums.forEach(function(n, idx) {
+    if (used[idx]) return;
+    if (res.odo == null && (n.v >= 2e4 || carOdo && n.v >= 5e3 && n.v >= carOdo * 0.8 && n.v <= carOdo + 4e4)) {
+      res.odo = n.v;
+    } else if (res.sum == null && n.v >= 150 && n.v <= 3e4) {
+      res.sum = n.v;
+      money = "sum";
+    } else if (n.v > 0 && n.v < 150) small.push(n.v);
+  });
+  small.forEach(function(v) {
+    if (res.liters == null) res.liters = v;
+    else if (res.price == null) res.price = v;
+  });
+  var r2 = function(x) {
+    return Math.round(x * 100) / 100;
+  };
+  if (res.liters != null && res.price != null && res.sum == null) res.sum = r2(res.liters * res.price);
+  else if (res.liters != null && res.sum != null && res.price == null) res.price = r2(res.sum / res.liters);
+  else if (res.price != null && res.sum != null && res.liters == null) res.liters = r2(res.sum / res.price);
+  if (/(^| )не (до )?(полн|под завязку|до конца)/.test(raw) || /(^| )(частично|немного|долил[а-я]*|подлил[а-я]*|подкинул[а-я]*|добавил[а-я]*)( |$)/.test(raw) || /(пол ?бака|половин[а-я]* бака)/.test(raw)) res.full = false;
+  else if (/(до полного|полный|полная|полную|полностью|под завязку|под пробку|до пробки|до краев)/.test(raw)) res.full = true;
+  var pl = (ctx.places || []).slice().sort(function(a, b) {
+    return String(b).length - String(a).length;
+  });
+  for (var i = 0; i < pl.length && !res.place; i++) {
+    var nm = String(pl[i]).toLowerCase().replace(/ё/g, "е").trim();
+    if (nm && raw.indexOf(nm) >= 0) res.place = pl[i];
+  }
+  if (!res.place) {
+    for (var j = 0; j < VW_BRANDS.length; j++) {
+      if (new RegExp("(^| )" + VW_BRANDS[j][0]).test(raw)) {
+        res.place = VW_BRANDS[j][1];
+        break;
+      }
+    }
+  }
+  return res;
+}
+
+function vwSummary(r) {
+  return [r.liters != null ? nf1.format(r.liters) + " л" : null, r.price != null ? nf2.format(r.price) + " " + cur() + "/л" : null, r.sum != null ? money(r.sum) : null, r.odo != null ? km(r.odo) : null, r.full === true ? "до полного" : r.full === false ? "не до полного" : null, r.place].filter(Boolean).join(" · ");
+}
+function openVoiceFuel(onParsed) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition, car = curCar();
+  const ctx = () => ({ odo: car && car.odo, places: (S.places || []).map((p) => p.name) });
+  const ov = document.createElement("div");
+  ov.className = "ov";
+  ov.style.zIndex = 70;
+  ov.style.alignItems = "center";
+  ov.innerHTML = `<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Заправка голосом</b><button class="x" type="button" id="vX">✕</button></div><div class="shb">
+ <button type="button" class="btn full" id="vMic" style="padding:18px;font-size:18px">🎤 Нажмите и говорите</button>
+ <div class="mut sm" id="vMsg" style="margin:10px 0">Говорите как удобно, например: «залил сорок литров по шестьдесят два, пробег сто тридцать восемь пятьсот, до полного». Можно в любом порядке.</div>
+ <div class="f"><label>Что услышал (можно исправить или надиктовать кнопкой 🎤 на клавиатуре)</label><textarea id="vTxt" rows="2" style="min-height:64px"></textarea></div>
+ <div id="vRes" class="sm" style="margin-bottom:10px;min-height:20px"></div>
+ <button type="button" class="btn full" id="vOk">✔ Применить к записи</button></div></div>`;
+  document.body.appendChild(ov);
+  const txt = $("#vTxt", ov), res = $("#vRes", ov), msg = $("#vMsg", ov), mic = $("#vMic", ov);
+  let rec = null, listening = false;
+  const stopRec = () => {
+    try {
+      rec && rec.abort();
+    } catch (e) {
+    }
+    rec = null;
+    listening = false;
+  };
+  const close = () => {
+    stopRec();
+    ov.remove();
+  };
+  const show = () => {
+    const r = parseFuelSpeech(txt.value, ctx());
+    res.innerHTML = vwSummary(r) ? "<b>Понял:</b> " + esc(vwSummary(r)) : txt.value.trim() ? '<span class="mut">Числа не распознаны, попробуйте ещё раз</span>' : "";
+    return r;
+  };
+  const apply = () => {
+    const r = parseFuelSpeech(txt.value, ctx());
+    if (r.liters == null && r.price == null && r.sum == null && r.odo == null) {
+      show();
+      msg.textContent = "Не понял числа. Скажите, например: «сорок литров по шестьдесят два».";
+      return;
+    }
+    close();
+    onParsed(r, txt.value);
+  };
+  $("#vX", ov).onclick = close;
+  ov.addEventListener("click", (e) => {
+    if (e.target === ov) close();
+  });
+  txt.oninput = show;
+  $("#vOk", ov).onclick = apply;
+  mic.onclick = () => {
+    if (listening) {
+      try {
+        rec.stop();
+      } catch (e) {
+      }
+      return;
+    }
+    if (!SR) {
+      msg.textContent = "Распознавание речи недоступно. Нажмите 🎤 на клавиатуре iPhone в поле ниже, надиктуйте и нажмите «Применить».";
+      txt.focus();
+      return;
+    }
+    try {
+      rec = new SR();
+      rec.lang = "ru-RU";
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      rec.onresult = (e) => {
+        let s = "";
+        for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript + " ";
+        txt.value = s.trim();
+        show();
+      };
+      rec.onerror = (e) => {
+        const c = e && e.error;
+        msg.textContent = c === "not-allowed" || c === "service-not-allowed" ? "Нет доступа к микрофону или распознаванию речи. Разрешите в Настройки → Safari, либо нажмите 🎤 на клавиатуре в поле ниже." : c === "no-speech" ? "Ничего не услышал. Нажмите и повторите." : c === "network" ? "Нет связи для распознавания речи. Можно надиктовать клавиатурой в поле ниже." : "Не получилось распознать (" + (c || "ошибка") + "). Можно надиктовать клавиатурой в поле ниже.";
+        if (c === "not-allowed" || c === "service-not-allowed") txt.focus();
+      };
+      rec.onend = () => {
+        listening = false;
+        mic.textContent = "🎤 Нажмите и говорите";
+        mic.classList.remove("red");
+        rec = null;
+        const r = parseFuelSpeech(txt.value, ctx());
+        if (txt.value.trim() && (r.liters != null || r.price != null || r.sum != null || r.odo != null)) apply();
+      };
+      txt.value = "";
+      res.innerHTML = "";
+      msg.textContent = "Слушаю… говорите, затем замолчите.";
+      mic.textContent = "⏹ Слушаю… (нажмите, чтобы закончить)";
+      listening = true;
+      rec.start();
+    } catch (e) {
+      listening = false;
+      mic.textContent = "🎤 Нажмите и говорите";
+      msg.textContent = "Не удалось включить микрофон. Надиктуйте клавиатурой в поле ниже.";
+    }
+  };
+}
+
 function recForm(id, pre = {}) {
   var _a, _b, _c;
   const car = curCar(), ex = id ? S.records.find((r2) => r2.id === id) : null;
@@ -642,7 +1224,7 @@ function recForm(id, pre = {}) {
  <div class="two">${fld("Дата", `<input type="date" name="date" value="${r.date}" required>`)}${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = r.odo) != null ? _a : ""}" placeholder="${car.odo || ""}">`)}</div>
  <div id="itemsBox" class="f"><label>Что сделано / заменено</label><div class="chips" style="flex-wrap:wrap;overflow:visible" id="chipsArea"></div><div class="flex"><input id="newItem" placeholder="Своя позиция…" class="grow"><button type="button" class="btn sec" id="addItem">+</button></div></div>
  ${fld("Название / описание", `<input name="title" value="${esc(r.extra != null ? r.extra : (r.items || []).length ? "" : r.title || "")}" placeholder="например: ТО-60 у официалов">`, "tt")}
- <div id="fuelBox"><div class="two">${fld("Литры", `<input name="liters" inputmode="decimal" value="${(_b = r.liters) != null ? _b : ""}">`)}${fld("Цена за литр", `<input name="ppl" inputmode="decimal" placeholder="авто">`)}</div><div class="f"><label class="sw"><input type="checkbox" name="full" ${r.full !== false ? "checked" : ""}> Заправил «до полного» (для расчёта расхода)</label></div></div>
+ <div id="fuelBox"><button type="button" class="btn sec full" id="micBtn" style="margin-bottom:12px">🎤 Сказать голосом</button><div class="two">${fld("Литры", `<input name="liters" inputmode="decimal" value="${(_b = r.liters) != null ? _b : ""}">`)}${fld("Цена за литр", `<input name="ppl" inputmode="decimal" placeholder="авто">`)}</div><div class="f"><label class="sw"><input type="checkbox" name="full" ${r.full !== false ? "checked" : ""}> Заправил «до полного» (для расчёта расхода)</label></div></div>
  <div class="two">${fld("Сумма, " + cur(), `<input name="cost" inputmode="decimal" value="${(_c = r.cost) != null ? _c : ""}">`)}${fld("Место / сервис", `<input name="place" value="${esc(r.place || "")}" placeholder="АЗС, СТО…">`)}</div>
  <div id="azsRow" style="display:none;margin:-2px 0 12px"><button type="button" class="btn sec" id="azsBtn">📍 АЗС рядом</button><div id="azsList" class="chips" style="flex-wrap:wrap;overflow:visible;margin-top:8px"></div></div>
  ${fld("Заметки", `<textarea name="notes" placeholder="Артикулы, марка масла, что мастер сказал…">${esc(r.notes || "")}</textarea>`)}
@@ -830,6 +1412,21 @@ function recForm(id, pre = {}) {
     const key = "ФН " + q.fn + " ФД " + q.fd;
     if (!E.notes.value.includes(key)) E.notes.value = (E.notes.value ? E.notes.value + "\n" : "") + "Чек " + fmtDate(q.date) + " " + q.time + " · " + key + " ФП " + q.fp;
     toast("🧾 " + fmtDate(q.date) + " · " + money(q.sum));
+  });
+  $("#micBtn", o).onclick = () => openVoiceFuel((v) => {
+    const rd = (x) => Math.round(x * 100) / 100;
+    if (v.price != null) P.value = v.price;
+    if (v.liters != null) L.value = v.liters;
+    if (v.sum != null) C.value = v.sum;
+    else if (v.liters != null && pn(P.value)) C.value = rd(v.liters * pn(P.value));
+    if (!pn(L.value) && pn(C.value) && pn(P.value)) L.value = rd(pn(C.value) / pn(P.value));
+    if (v.odo != null) E.odo.value = Math.round(v.odo);
+    if (v.full != null) E.full.checked = v.full;
+    if (v.place) {
+      E.place.value = v.place;
+      autoPlace = null;
+    }
+    toast("🎤 " + vwSummary(v));
   });
   F.onsubmit = (e) => {
     e.preventDefault();
@@ -1031,7 +1628,7 @@ function importFile(file) {
       toast("Импортировано ✓");
     };
     $("#im1", o).onclick = () => {
-      ["cars", "records", "reminders", "docs", "places"].forEach((k) => {
+      ["cars", "records", "reminders", "docs", "places", "trips"].forEach((k) => {
         const have = new Set((S[k] || []).map((x) => x.id));
         (d[k] || []).forEach((x) => {
           if (!have.has(x.id)) S[k].push(x);
@@ -1089,6 +1686,41 @@ const A = {
     scrollTo(0, 0);
   },
   addRec: (d) => recForm(null, { type: d.t, item: d.item }),
+  tripP: (d) => {
+    ui.tripP = +d.p;
+    render();
+  },
+  tripStart: () => {
+    const car = curCar();
+    if (!car) return toast("Сначала добавьте автомобиль");
+    const dflt = tripDefaults(car), p0 = $("#tpPrice0"), l0 = $("#tpL1000");
+    const price = p0 && pn(p0.value) != null ? pn(p0.value) : dflt.price, l100 = l0 && pn(l0.value) != null ? pn(l0.value) : dflt.l100;
+    if (p0 && pn(p0.value) != null) S.settings.tripPrice = pn(p0.value);
+    if (l0 && pn(l0.value) != null) S.settings.tripL100 = pn(l0.value);
+    save();
+    tripPut({ id: uid(), carId: car.id, start: Date.now(), km: 0, price, l100, last: null, acc: null, fixT: null, state: "run", end: null });
+    tripTrack();
+    render();
+  },
+  tripStop: () => {
+    const t = tripGet();
+    if (!t) return;
+    tripHalt();
+    t.state = "stopped";
+    t.end = Date.now();
+    tripPut(t);
+    render();
+    tripFinish();
+  },
+  tripFinish,
+  tripCancel: () => {
+    if (!confirm("Отменить рейс без сохранения?")) return;
+    tripHalt();
+    tripPut(null);
+    render();
+  },
+  tripOpen: (d) => tripEdit(d.id),
+  tripAdd: tripAddManual,
   recOpen: (d) => recDetail(d.id),
   recEdit: (d) => recForm(d.id),
   recDup: (d) => {
@@ -1173,6 +1805,8 @@ const A = {
   wipe: () => {
     if (confirm("Удалить ВСЕ данные без возможности восстановления?") && confirm("Точно удалить? Сначала лучше сделать копию.")) {
       S = blank();
+      tripHalt();
+      tripPut(null);
       save();
       render();
       toast("Данные удалены");
@@ -1189,13 +1823,26 @@ document.addEventListener("click", (e) => {
   }
 });
 document.addEventListener("input", (e) => {
-  if (e.target && e.target.id === "tripKm") tripCalc();
+  const id = e.target && e.target.id;
+  if (id === "tripKm") tripCalc();
+  if (id === "tpPrice" || id === "tpL100") {
+    const t = tripGet();
+    if (t) {
+      t[id === "tpPrice" ? "price" : "l100"] = pn(e.target.value);
+      tripPut(t);
+      tripUI();
+    }
+  }
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.matches && t.matches("[data-imp]") && t.files[0]) {
     importFile(t.files[0]);
     t.value = "";
+  }
+  if (t.id === "tpPrice0" || t.id === "tpL1000") {
+    S.settings[t.id === "tpPrice0" ? "tripPrice" : "tripL100"] = pn(t.value);
+    save();
   }
   if (t.id === "cu") {
     S.settings.currency = t.value.trim() || "₽";
@@ -1234,6 +1881,14 @@ function makeIcon() {
     }
     applyTheme();
     render();
+    tripTrack();
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && tripGet() && tripGet().state === "run") {
+        tripKeepAwake();
+        tripTrack();
+        tripUI();
+      }
+    });
     const u = $("#usage");
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then((e) => {
