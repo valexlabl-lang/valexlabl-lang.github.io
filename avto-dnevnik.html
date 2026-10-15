@@ -632,6 +632,7 @@ function recForm(id, pre = {}) {
     if (c) {
       r.type = c.dataset.c;
       draw();
+      prefillFuel();
       return;
     }
     const i = e.target.closest("[data-i]");
@@ -670,7 +671,23 @@ function recForm(id, pre = {}) {
   C.oninput = () => calc("c");
   if (ex && ex.type === "fuel" && ex.liters && ex.cost) P.value = Math.round(ex.cost / ex.liters * 100) / 100;
   photoField(o, () => r.photo, (v) => r.photo = v, "Добавить фото");
+  const lastFuel = !ex ? S.records.filter((x) => x.carId === car.id && x.type === "fuel" && x.liters > 0 && x.cost > 0).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0))[0] : null;
+  let autoPlace = null;
+  const prefillFuel = () => {
+    if (!lastFuel) return;
+    if (r.type === "fuel") {
+      if (!P.value) P.value = Math.round(lastFuel.cost / lastFuel.liters * 100) / 100;
+      if (!E.place.value && lastFuel.place) {
+        E.place.value = lastFuel.place;
+        autoPlace = lastFuel.place;
+      }
+    } else if (autoPlace !== null && E.place.value === autoPlace) {
+      E.place.value = "";
+      autoPlace = null;
+    }
+  };
   draw();
+  prefillFuel();
   F.onsubmit = (e) => {
     e.preventDefault();
     const g = (n) => E[n].value;
