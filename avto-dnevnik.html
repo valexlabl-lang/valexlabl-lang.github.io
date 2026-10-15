@@ -824,8 +824,9 @@ function tripsView() {
  ${need.length ? '<div class="two" style="margin-top:10px">' + need.join("") + "</div>" : ""}
  <div class="sm mut" style="margin-top:8px">Километры считаются по GPS от места старта. Маршрут не нужен.</div></div>`;
   }
-  const P = ui.tripP != null ? ui.tripP : 30, cutoff = P ? iso(new Date(Date.now() - (P - 1) * 864e5)) : "0000-00-00";
-  const all = S.trips.filter((x) => x.carId === car.id), list = all.filter((x) => x.date >= cutoff);
+  const P = ui.tripP || "month", td = today(), ms = td.slice(0, 8) + "01";
+  const from = P === "day" ? td : P === "month" ? ms : ui.tripFrom || ms, to = P === "range" ? ui.tripTo || td : P === "day" ? td : "9999-99-99";
+  const all = S.trips.filter((x) => x.carId === car.id), list = all.filter((x) => x.date >= from && x.date <= to);
   const sum = (f) => list.reduce((s, x) => s + (f(x) || 0), 0);
   const kmS = sum((x) => x.km), rev = sum((x) => x.revenue), fuel = sum((x) => x.fuel), prof = sum((x) => x.profit);
   const timed = list.filter((x) => x.durMs > 6e4), hrs = timed.reduce((s, x) => s + x.durMs / 36e5, 0), profT = timed.reduce((s, x) => s + (x.profit || 0), 0);
@@ -838,7 +839,8 @@ function tripsView() {
     return `<button class="rec" data-a="tripOpen" data-id="${x.id}"><div class="ic" style="background:var(--card2)">🚕</div><div class="m"><div class="t">${fmtDate(x.date)}${tm} · ${nf1.format(x.km)} км</div><div class="s">${esc(x.note || "")}${x.note ? " · " : ""}бензин ${money(x.fuel)} · ${money(x.revenue)}</div></div><div class="c" style="color:${x.profit >= 0 ? "var(--ok)" : "var(--bad)"}">${money(x.profit)}</div></button>`;
   }).join("");
   return `<h3>Рейсы · ${esc(car.name)}</h3>${top}
- <div class="chips">${[[1, "Сегодня"], [7, "7 дней"], [30, "30 дней"], [0, "Всё"]].map((p) => `<button class="chip ${P === p[0] ? "on" : ""}" data-a="tripP" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ <div class="chips">${[["day", "Сегодня"], ["month", "За месяц"], ["range", "📅 Период"]].map((p) => `<button class="chip ${P === p[0] ? "on" : ""}" data-a="tripP" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ ${P === "range" ? `<div class="two" style="margin-bottom:12px"><div class="f" style="margin:0"><label>С</label><input type="date" id="tpFrom" value="${from}"></div><div class="f" style="margin:0"><label>По</label><input type="date" id="tpTo" value="${to}"></div></div>` : ""}
  ${tiles}
  ${list.length ? `<button class="card flex between" style="width:100%;text-align:left" data-a="tripToggle"><b>📋 История рейсов (${list.length})</b><span class="mut" style="font-size:18px">${ui.tripOpen ? "▴" : "▾"}</span></button>${ui.tripOpen ? `<div class="card" style="padding:4px 14px">${rows}</div>` : ""}` : `<div class="card empty" style="padding:20px">За этот период рейсов нет.</div>`}
  <button class="btn sec full" data-a="tripAdd">＋ Добавить рейс вручную</button>
@@ -1701,7 +1703,7 @@ const A = {
     render();
   },
   tripP: (d) => {
-    ui.tripP = +d.p;
+    ui.tripP = d.p;
     render();
   },
   tripStart: () => {
@@ -1853,6 +1855,15 @@ document.addEventListener("change", (e) => {
   if (t.matches && t.matches("[data-imp]") && t.files[0]) {
     importFile(t.files[0]);
     t.value = "";
+  }
+  if (t.id === "tpFrom" || t.id === "tpTo") {
+    if (t.value) ui[t.id === "tpFrom" ? "tripFrom" : "tripTo"] = t.value;
+    if (ui.tripFrom && ui.tripTo && ui.tripFrom > ui.tripTo) {
+      const x = ui.tripFrom;
+      ui.tripFrom = ui.tripTo;
+      ui.tripTo = x;
+    }
+    render();
   }
   if (t.id === "tpPrice0" || t.id === "tpL1000") {
     S.settings[t.id === "tpPrice0" ? "tripPrice" : "tripL100"] = pn(t.value);
