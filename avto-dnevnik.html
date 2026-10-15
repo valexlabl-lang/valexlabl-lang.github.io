@@ -611,6 +611,7 @@ function recForm(id, pre = {}) {
  ${fld("Название / описание", `<input name="title" value="${esc(r.extra != null ? r.extra : (r.items || []).length ? "" : r.title || "")}" placeholder="например: ТО-60 у официалов">`, "tt")}
  <div id="fuelBox"><div class="two">${fld("Литры", `<input name="liters" inputmode="decimal" value="${(_b = r.liters) != null ? _b : ""}">`)}${fld("Цена за литр", `<input name="ppl" inputmode="decimal" placeholder="авто">`)}</div><div class="f"><label class="sw"><input type="checkbox" name="full" ${r.full !== false ? "checked" : ""}> Заправил «до полного» (для расчёта расхода)</label></div></div>
  <div class="two">${fld("Сумма, " + cur(), `<input name="cost" inputmode="decimal" value="${(_c = r.cost) != null ? _c : ""}">`)}${fld("Место / сервис", `<input name="place" value="${esc(r.place || "")}" placeholder="АЗС, СТО…">`)}</div>
+ <div id="azsRow" style="display:none;margin:-2px 0 12px"><button type="button" class="btn sec" id="azsBtn">📍 АЗС рядом</button><div id="azsList" class="chips" style="flex-wrap:wrap;overflow:visible;margin-top:8px"></div></div>
  ${fld("Заметки", `<textarea name="notes" placeholder="Артикулы, марка масла, что мастер сказал…">${esc(r.notes || "")}</textarea>`)}
  <div class="f"><label>Фото (чек, заказ-наряд)</label><div class="flex" data-ph style="flex-wrap:wrap"></div></div>
  <button class="btn full" type="submit">${ex ? "Сохранить" : "Добавить запись"}</button></form>`);
@@ -621,6 +622,7 @@ function recForm(id, pre = {}) {
     $("#fuelBox", o).style.display = fuel ? "" : "none";
     $("#itemsBox", o).style.display = fuel ? "none" : "";
     $(".tt", o).style.display = fuel ? "none" : "";
+    $("#azsRow", o).style.display = fuel ? "" : "none";
     const list = [...allItems(r.type)];
     (r.items || []).forEach((i) => {
       if (!list.some((x) => norm(x) === norm(i))) list.push(i);
@@ -688,6 +690,82 @@ function recForm(id, pre = {}) {
   };
   draw();
   prefillFuel();
+  const azsBtn = $("#azsBtn", o), azsList = $("#azsList", o);
+  const hav = (a, b, c, d) => {
+    const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
+    const h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) * Math.sin(y / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
+  const OVP = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  const overpass = async (q) => {
+    let err = new Error("no server");
+    for (const u of OVP) {
+      try {
+        const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
+        const res = await fetch(u, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ac.signal });
+        clearTimeout(tm);
+        if (!res.ok) throw new Error("http " + res.status);
+        return await res.json();
+      } catch (e) {
+        err = e;
+      }
+    }
+    throw err;
+  };
+  const findAzs = async (lat, lon) => {
+    for (const rad of [150, 400]) {
+      const q = `[out:json][timeout:12];(node(around:${rad},${lat},${lon})[amenity=fuel];way(around:${rad},${lat},${lon})[amenity=fuel];);out center tags;`;
+      const j = await overpass(q);
+      const list = (j.elements || []).map((e) => {
+        const t = e.tags || {};
+        const la = e.lat != null ? e.lat : e.center && e.center.lat, lo = e.lon != null ? e.lon : e.center && e.center.lon;
+        return la == null || lo == null ? null : { name: t.brand || t.name || t.operator || "АЗС", dist: Math.round(hav(lat, lon, la, lo)) };
+      }).filter(Boolean).sort((a, b) => a.dist - b.dist);
+      if (list.length) return list;
+    }
+    return [];
+  };
+  azsBtn.onclick = () => {
+    if (!navigator.geolocation) return toast("Геолокация недоступна в этом браузере");
+    azsBtn.disabled = true;
+    azsBtn.textContent = "📍 Ищу…";
+    azsList.innerHTML = "";
+    const done = () => {
+      azsBtn.disabled = false;
+      azsBtn.textContent = "📍 АЗС рядом";
+    };
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const seen = new Set();
+        const list = (await findAzs(pos.coords.latitude, pos.coords.longitude)).filter((x) => {
+          const k = norm(x.name);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        }).slice(0, 5);
+        if (!list.length) toast("АЗС рядом не найдена, впишите вручную");
+        else {
+          E.place.value = list[0].name;
+          autoPlace = E.place.value;
+          if (list.length > 1) azsList.innerHTML = '<span class="mut sm" style="width:100%">Рядом также:</span>' + list.slice(1).map((x) => `<button type="button" class="chip" data-azs="${esc(x.name)}">${esc(x.name)} · ${x.dist} м</button>`).join("");
+          toast("📍 " + list[0].name + " · " + list[0].dist + " м");
+        }
+      } catch (e) {
+        toast("Не удалось найти АЗС: нет связи с картой");
+      }
+      done();
+    }, (err) => {
+      toast(err && err.code === 1 ? "Нет доступа к геолокации. Разрешите в Настройки → Конфиденциальность → Службы геолокации" : "Не удалось определить местоположение");
+      done();
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  };
+  azsList.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-azs]");
+    if (b) {
+      E.place.value = b.dataset.azs;
+      autoPlace = E.place.value;
+    }
+  });
   F.onsubmit = (e) => {
     e.preventDefault();
     const g = (n) => E[n].value;
