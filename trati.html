@@ -109,6 +109,7 @@ svg text{fill:var(--mut);font-size:9px}
 .hbar .b{height:8px;border-radius:8px;background:var(--card2);overflow:hidden}.hbar .b>div{height:100%;border-radius:8px}
 #print{display:none}
 @media print{body{background:#fff;color:#000;padding:0}#app,nav,.fab,#toast,.ov{display:none!important}#print{display:block;color:#000;font-size:12px}#print table{width:100%;border-collapse:collapse}#print td,#print th{border:1px solid #bbb;padding:4px 6px;text-align:left}#print h1,#print h2{margin:10px 0 6px}}
+.emo{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.emo button{background:var(--card);border:1.5px solid var(--line);border-radius:12px;font-size:24px;padding:6px 0}.emo button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--card))}.emo.col{grid-template-columns:repeat(10,1fr)}.emo.col button{height:30px;border-radius:50%;border:2px solid transparent;padding:0}.emo.col button.on{border-color:var(--txt)}
 .chips{flex-wrap:nowrap}.chip{flex:none}
 .btn[disabled]{opacity:.45}
 .big{font-size:30px;font-weight:700;text-align:center;padding:14px}
@@ -143,7 +144,7 @@ window.addEventListener('unhandledrejection',function(e){show('Ошибка: '+(
 "use strict";
 window.__boot = 1;
 const APP = { db: "trati", ls: "tr_state", zx: false, valid: (x) => x && Array.isArray(x.exp), scanHint: "Наведите на QR-код на кассовом чеке. Держите 15–25 см, дождитесь резкости.", scanOther: "Нужен QR кассового чека." };
-const blank = () => ({ v: 1, settings: { theme: "auto", lastBackup: null, alertDay: null, alertPopup: true, budget: 0, autoSub: true }, exp: [], subs: [] });
+const blank = () => ({ v: 1, settings: { theme: "auto", lastBackup: null, alertDay: null, alertPopup: true, budget: 0, autoSub: true }, exp: [], subs: [], cats: [] });
 let S = blank();
 const ui = { view: "home", q: "", cat: "all", oldOpen: false, ym: "" };
 
@@ -642,7 +643,7 @@ function offName(j) {
 async function lookupProduct(code) {
   code = String(code || "").replace(/\D/g, "");
   if (!code) return null;
-  const mine = S.items.slice().reverse().find((x) => x.barcode === code && x.name);
+  const mine = (S.items || S.exp || []).slice().reverse().find((x) => x.barcode === code && x.name);
   if (mine) return { name: mine.name, src: "из ваших покупок" };
   if (S.catalog[code] && S.catalog[code].name) return { name: S.catalog[code].name, src: "из вашего каталога" };
   const F = "?fields=product_name,product_name_ru,generic_name,brands,quantity";
@@ -811,6 +812,143 @@ const KW = [
   ["fun", /кино|игр|театр|концерт|развлеч|боулинг|клуб|квест|музей|подарок/],
   ["shop", /одежд|обув|куртк|покупк|озон|ozon|вайлдберриз|wildberries|алиэкспресс|техник|мебел|икея|днс|мвидео|косметик/]
 ];
+
+/* ---------- свои категории ---------- */
+const BASE_CATS = new Set(Object.keys(CATS));
+const CPAL = ["#ff6b81", "#ff9f43", "#feca57", "#1dd1a1", "#48dbfb", "#54a0ff", "#5f27cd", "#c56cf0", "#ff9ff3", "#8395a7"];
+const ICON_KW = [
+  [/игруш/, "🧸"], [/школ|учеб|репетитор|курс|обучен|универ|институт|студент/, "🎓"],
+  [/ребен|ребен|дет[иья]|детск|малыш|сын|доч[ьк]|памперс|подгузн|ясли|садик|сад\b|няня/, "👶"],
+  [/собак|пес\b|щен/, "🐕"], [/кошк|кот\b|котен|котик/, "🐈"], [/питом|животн|корм|ветеринар|зоо/, "🐾"],
+  [/подар/, "🎁"], [/свадьб|кольц/, "💍"], [/праздн|день рожд|юбилей|торт/, "🎉"], [/цвет|букет/, "💐"],
+  [/спорт|зал|фитнес|трениров|бассейн|йога|бег/, "🏋️"], [/красот|салон|парикмах|маникюр|стрижк|барбер|космет/, "💅"],
+  [/одежд|обув|гардероб|шопинг/, "👗"], [/путешеств|отпуск|отел|авиа|перелет|поездк|тур\b|туризм|море/, "✈️"],
+  [/книг|чтени/, "📚"], [/музык|гитар|пианино/, "🎵"], [/игр|гейм|steam|плейстейшн|playstation|xbox/, "🎮"],
+  [/кино|фильм|театр/, "🎬"], [/хобби|рисован|творчеств|рукодели/, "🎨"], [/рыбалк|охот|поход|кемпинг/, "🎣"],
+  [/дач|огород|участок|рассад|сад-/, "🌱"], [/ремонт|строй|инструмент|гараж/, "🔧"],
+  [/налог|госуслуг|пошлин|нотариус|юрист/, "🏛️"], [/кредит|ипотек|долг|займ|рассрочк/, "🏦"],
+  [/страхов/, "🛡️"], [/благотвор|пожертв|церков|храм/, "💝"], [/родител|мама|папа|бабушк|дедушк/, "👵"],
+  [/жена|муж\b|свидан|любим|девушк|парень|романт/, "❤️"], [/работ|офис|бизнес|ип\b|коллег/, "💼"],
+  [/связь|телефон|интернет|сотов/, "📱"], [/техник|гаджет|компьютер|ноутбук|электрон/, "💻"],
+  [/мебел|интерьер|декор/, "🛋️"], [/уборк|химия|бытов|порядок/, "🧹"], [/алкогол|вино|пиво|бар\b/, "🍷"],
+  [/сигарет|табак|вейп/, "🚬"], [/кофе/, "☕"], [/чай/, "🍵"], [/здоров|врач|аптек|лекарств|медицин/, "💊"],
+  [/машин|авто|бензин|парков/, "🚗"], [/такси|транспорт|метро/, "🚕"], [/еда|продукт|магазин/, "🛒"],
+  [/инвест|накоплен|сбережен|копилк|подушк|депозит/, "💰"], [/вода|свет|жкх|коммунал|квартир/, "🏠"],
+  [/подписк|сервис/, "🔁"], [/фото|камера|съемк/, "📷"], [/сон|отдых|релакс|спа\b|баня|сауна/, "🧖"], [/врем|ожидан|разное|прочее/, "📦"]
+];
+const ICON_FALLBACK = ["⭐", "🌈", "🍀", "🎯", "🧩", "🪴", "🔖", "🦋", "🌟", "🧿"];
+const ICON_PICK = ["👶", "🧸", "🎓", "🎒", "🐕", "🐈", "🐾", "🎁", "🎉", "💍", "💐", "🏋️", "💅", "💇", "👗", "👟", "✈️", "🏖️", "🚆", "📚", "🎵", "🎮", "🎬", "🎨", "🎣", "⛺", "🌱", "🏡", "🔧", "🔨", "🏛️", "🏦", "🛡️", "💝", "👵", "❤️", "💼", "📱", "💻", "📷", "🛋️", "🧹", "🍷", "🍕", "🥗", "🍰", "☕", "💊", "🦷", "🚗", "🛵", "🚲", "💰", "📈", "🔁", "🧖", "⚽", "🎲", "🧩", "⭐", "🌈"];
+function iconFor(name) {
+  const t = norm(name).replace(/ё/g, "е");
+  if (!t) return "⭐";
+  for (let i = 0; i < ICON_KW.length; i++) if (ICON_KW[i][0].test(t)) return ICON_KW[i][1];
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  return ICON_FALLBACK[h % ICON_FALLBACK.length];
+}
+function syncCats() {
+  Object.keys(CATS).forEach((k) => {
+    if (!BASE_CATS.has(k)) delete CATS[k];
+  });
+  (S.cats || []).forEach((c) => {
+    CATS[c.id] = { n: c.n, i: c.i, c: c.c };
+  });
+  S.exp.forEach((x) => {
+    if (!CATS[x.cat]) x.cat = "other";
+  });
+}
+function customGuess(t) {
+  for (const c of S.cats || []) {
+    const words = String(c.kw || "").split(/[,;]+/).map((w) => norm(w)).filter((w) => w.length >= 2);
+    const nm = norm(c.n), stem = nm.length > 5 ? nm.slice(0, 5) : nm;
+    if (stem.length >= 3) words.push(stem);
+    if (words.some((w) => t.indexOf(w) >= 0)) return c.id;
+  }
+  return null;
+}
+function catForm(id, done) {
+  const ex = id ? (S.cats || []).find((c) => c.id === id) : null;
+  const r = ex ? Object.assign({ kw: "" }, ex) : { id: "c_" + uid(), n: "", i: "", c: CPAL[(S.cats || []).length % CPAL.length], kw: "" };
+  let manual = !!ex;
+  const o = sheet(ex ? "Категория" : "Новая категория", `<form id="cf">
+ <div id="cpv" style="text-align:center;margin:4px 0 14px"></div>
+ <div class="f"><label>Название</label><input name="n" maxlength="24" autocomplete="off" placeholder="например: Ребёнок" value="${esc(r.n)}"></div>
+ <div class="f"><label>Картинка (подбирается сама, можно выбрать свою)</label><div class="emo">${ICON_PICK.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join("")}</div></div>
+ <div class="f"><label>Цвет</label><div class="emo col">${CPAL.map((c) => `<button type="button" data-col="${c}" style="background:${c}"></button>`).join("")}</div></div>
+ <div class="f"><label>Слова для автоопределения (через запятую, необязательно)</label><input name="kw" autocomplete="off" placeholder="садик, памперсы, игрушки" value="${esc(r.kw || "")}"><div class="sm mut" style="margin-top:4px">Если в заметке или голосом встретится такое слово, трата сама попадёт в эту категорию.</div></div>
+ <button class="btn full" type="submit">Сохранить</button>
+ <button type="button" class="btn sec full" id="cCancel" style="margin-top:8px">Отмена</button>
+ ${ex ? '<button type="button" class="btn red full" id="cDel" style="margin-top:8px">🗑️ Удалить категорию</button>' : ""}</form>`);
+  const F = $("#cf", o), E = F.elements;
+  const sync = () => {
+    if (!manual) r.i = iconFor(E.n.value);
+    $("#cpv", o).innerHTML = `<div style="display:inline-grid;place-items:center;width:84px;height:84px;border-radius:26px;font-size:46px;background:${r.c}33;border:2px solid ${r.c}">${r.i || "⭐"}</div><div style="font-weight:700;margin-top:6px">${esc(E.n.value.trim() || "Название")}</div>`;
+    $$("[data-e]", o).forEach((b) => b.classList.toggle("on", b.dataset.e === r.i));
+    $$("[data-col]", o).forEach((b) => b.classList.toggle("on", b.dataset.col === r.c));
+  };
+  sync();
+  E.n.oninput = sync;
+  o.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-e]");
+    if (b) {
+      manual = true;
+      r.i = b.dataset.e;
+      sync();
+      return;
+    }
+    const c = e.target.closest("[data-col]");
+    if (c) {
+      r.c = c.dataset.col;
+      sync();
+    }
+  });
+  const back = (cid) => {
+    if (done) done(cid);
+    else {
+      closeSheet();
+      render();
+    }
+  };
+  $("#cCancel", o).onclick = () => back(null);
+  if (!ex) setTimeout(() => {
+    try {
+      E.n.focus();
+    } catch (e) {
+    }
+  }, 250);
+  F.onsubmit = (e) => {
+    e.preventDefault();
+    r.n = E.n.value.trim();
+    r.kw = E.kw.value.trim();
+    if (!r.n) return toast("Введите название");
+    const dup = Object.entries(CATS).find(([k, c]) => k !== r.id && norm(c.n) === norm(r.n));
+    if (dup) return toast("Такая категория уже есть");
+    if (!r.i) r.i = iconFor(r.n);
+    S.cats = S.cats || [];
+    const k = S.cats.findIndex((c) => c.id === r.id);
+    if (k >= 0) S.cats[k] = r;
+    else S.cats.push(r);
+    syncCats();
+    save();
+    toast("Категория сохранена ✓");
+    back(r.id);
+  };
+  const del = $("#cDel", o);
+  if (del) del.onclick = () => {
+    const n = S.exp.filter((x) => x.cat === r.id).length;
+    if (!confirm("Удалить категорию «" + r.n + "»?" + (n ? " Трат: " + n + ", они перейдут в «Другое»." : ""))) return;
+    S.exp.forEach((x) => {
+      if (x.cat === r.id) x.cat = "other";
+    });
+    S.cats = S.cats.filter((c) => c.id !== r.id);
+    if (ui.cat === r.id) ui.cat = "all";
+    syncCats();
+    save();
+    closeSheet();
+    render();
+    toast("Категория удалена");
+  };
+}
 const SUB_PRESETS = ["Яндекс Плюс", "Кинопоиск", "YouTube Premium", "Telegram Premium", "Spotify", "Netflix", "iCloud", "ChatGPT", "VK Музыка", "Мобильная связь", "Интернет", "Спортзал"];
 const PERS = { w: "в неделю", m: "в месяц", q: "раз в 3 мес.", y: "в год" };
 const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
@@ -828,6 +966,8 @@ const sumOf = (l) => l.reduce((s, x) => s + (x.sum || 0), 0);
 function catGuess(note) {
   const t = norm(note);
   if (!t) return null;
+  const cg = customGuess(t);
+  if (cg) return cg;
   for (let i = 0; i < KW.length; i++) if (KW[i][1].test(t)) return KW[i][0];
   const f = t.split(/\s+/)[0], hit = S.exp.slice().reverse().find((x) => x.note && norm(x.note).split(/\s+/)[0] === f);
   return hit ? hit.cat : null;
@@ -952,14 +1092,14 @@ const whenText = (left) => left <= 0 ? "сегодня" : left === 1 ? "завт
 /* ---------- форма траты ---------- */
 function expForm(id, pre) {
   const ex = id ? S.exp.find((x) => x.id === id) : null;
-  const r = ex ? JSON.parse(JSON.stringify(ex)) : Object.assign({ id: uid(), date: today(), sum: "", cat: catOrder()[0], note: "", fiscal: null, createdAt: Date.now() }, pre || {});
+  const r = Object.assign(ex ? JSON.parse(JSON.stringify(ex)) : { id: uid(), date: today(), sum: "", cat: catOrder()[0], note: "", fiscal: null, createdAt: Date.now() }, pre || {});
   const notes = [...new Set(S.exp.slice().reverse().map((x) => x.note).filter(Boolean))].slice(0, 40);
   const o = sheet(ex ? "Редактировать трату" : "Новая трата", `<form id="ef">
  <div class="f"><input class="big" name="sum" inputmode="decimal" placeholder="0 ₽" value="${r.sum !== "" && r.sum != null ? r.sum : ""}" autocomplete="off"></div>
  <div class="two" style="margin-bottom:12px"><button type="button" class="btn sec" id="exV">🎤 Голосом</button><button type="button" class="btn sec" id="exQ">🧾 QR чека</button></div>
  <div class="chips" style="margin:0 0 6px"><button type="button" class="chip" data-d="0">Сегодня</button><button type="button" class="chip" data-d="1">Вчера</button></div>
  ${fld("Дата", `<input type="date" name="date" value="${r.date}" required>`)}
- <div class="cats">${catOrder().map((k) => `<button type="button" data-c="${k}"><i>${CATS[k].i}</i>${CATS[k].n}</button>`).join("")}</div>
+ <div class="cats">${catOrder().map((k) => `<button type="button" data-c="${k}"><i>${CATS[k].i}</i>${CATS[k].n}</button>`).join("")}<button type="button" data-newcat="1" style="border-style:dashed"><i>➕</i>Своя</button></div>
  <div class="f"><label>Заметка (на что потратили)</label><input name="note" list="nl" value="${esc(r.note)}" autocomplete="off" placeholder="например: кофе"><datalist id="nl">${notes.map((n) => `<option value="${esc(n)}">`).join("")}</datalist></div>
  <div id="fiscNote" class="sm mut" style="margin-bottom:10px"></div>
  <button class="btn full" type="submit">${ex ? "Сохранить" : "Записать"}</button>
@@ -973,6 +1113,11 @@ function expForm(id, pre) {
   sync();
   o.addEventListener("click", (e) => {
     const c = e.target.closest(".cats button");
+    if (c && c.dataset.newcat) {
+      const keep = Object.assign({}, r, { sum: E.sum.value, date: E.date.value, note: E.note.value });
+      catForm(null, (cid) => expForm(ex ? ex.id : null, cid ? Object.assign(keep, { cat: cid }) : keep));
+      return;
+    }
     if (c) {
       r.cat = c.dataset.c;
       touched = true;
@@ -1117,6 +1262,7 @@ function monthBar() {
   return `<div class="flex between" style="margin-bottom:12px"><button class="x" data-a="ymPrev">‹</button><b style="font-size:17px">${ymName(ui.ym)}</b><button class="x" data-a="ymNext" ${ui.ym >= ymOf(today()) ? "disabled style='opacity:.35'" : ""}>›</button></div>`;
 }
 function render() {
+  syncCats();
   applyTheme();
   const nSoon = soonSubs(3).length;
   setBadge(nSoon);
@@ -1190,6 +1336,9 @@ function moreView() {
   const lb = S.settings.lastBackup;
   return `<h3>Лимит и учёт</h3><div class="card"><div class="f"><label>Лимит трат на месяц, ₽ (0 — без лимита)</label><input id="bud" inputmode="numeric" value="${S.settings.budget || ""}" placeholder="например: 60000"></div>
  <label class="sw"><input type="checkbox" id="autoSub" ${S.settings.autoSub !== false ? "checked" : ""}> Записывать списания подписок в траты автоматически</label></div>
+ <h3>Мои категории</h3>
+ <div class="card">${(S.cats || []).length ? '<div class="chips" style="flex-wrap:wrap;margin:0 0 10px">' + S.cats.map((c) => `<button class="chip" data-a="catEdit" data-id="${c.id}">${c.i} ${esc(c.n)}</button>`).join("") + "</div>" : '<p class="sm mut" style="margin-top:0">Добавьте свои категории: «Ребёнок», «Питомец», «Хобби». Картинка подберётся сама, её можно поменять.</p>'}
+ <button class="btn sec full" data-a="catNew">➕ Добавить категорию</button></div>
  <h3>Данные и резервные копии</h3>
  <div class="card"><p class="sm mut" style="margin-top:0">Всё хранится только в памяти этого телефона. Если очистить данные Safari или удалить значок, записи пропадут, поэтому периодически делайте копию. Последняя: <b>${lb ? fmtDate(lb) : "не делалась"}</b></p>
  <div style="display:grid;gap:8px"><button class="btn" data-a="exp">💾 Скачать файл-копию (.json)</button><button class="btn sec" data-a="share">📤 Отправить / сохранить в «Файлы»</button><button class="btn sec" data-a="csv">📑 Траты в таблицу (.csv для Excel)</button>
@@ -1295,6 +1444,8 @@ function importFile(file) {
 /* ---------- действия ---------- */
 const A = {
   close: closeSheet,
+  catNew: () => catForm(null),
+  catEdit: (d) => catForm(d.id),
   tab: (d) => {
     ui.view = d.v;
     closeSheet();
