@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Дневник авто 2">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1116">
+<title>Дневник авто 2</title>
+<link rel="apple-touch-icon" sizes="180x180" href="avto2-icon-180.png">
+<link rel="manifest" href="avto2-manifest.json">
+<link rel="icon" type="image/png" href="avto2-icon-180.png">
+<style>
+:root{--bg:#0e1116;--card:#171b22;--card2:#1f252e;--txt:#eef2f7;--mut:#8b96a5;--line:#273040;--acc:#4f8cff;--acc2:#7a5cff;--ok:#34c759;--warn:#ffb02e;--bad:#ff5a5f;--sh:0 8px 30px rgba(0,0,0,.35)}
+html[data-theme=light]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}
+@media(prefers-color-scheme:light){html[data-theme=auto]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+#app{max-width:600px;margin:0 auto}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+input,select,textarea{font:inherit;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%;outline:none;font-size:16px}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;min-height:70px}
+.two>*,.f{min-width:0}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;width:100%;min-height:46px;text-align:left;display:block}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+#top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(27px + env(safe-area-inset-top)) 14px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+.carsel{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;max-width:70%}
+.carsel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--card2);color:var(--mut)}
+.pill.ok{background:rgba(52,199,89,.15);color:var(--ok)}.pill.soon{background:rgba(255,176,46,.16);color:var(--warn)}.pill.over{background:rgba(255,90,95,.16);color:var(--bad)}
+main{padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.hero{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0;box-shadow:var(--sh);position:relative;overflow:hidden}
+.hero .av{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:30px;overflow:hidden;flex:none}
+.hero .av img{width:100%;height:100%;object-fit:cover}
+.hero .row{display:flex;gap:12px;align-items:center}
+.hero h2{margin:0;font-size:20px}.hero .sub{opacity:.85;font-size:14px}
+.odo{font-size:34px;font-weight:800;letter-spacing:-.5px;margin-top:12px;display:flex;align-items:baseline;gap:8px}
+.odo small{font-size:15px;font-weight:600;opacity:.85}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600}
+.btn.sec{background:var(--card2);color:var(--txt)}.btn.red{background:rgba(255,90,95,.15);color:var(--bad)}.btn.glass{background:rgba(255,255,255,.22);color:#fff;padding:7px 12px;font-size:14px}
+.btn.full{width:100%}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.qa{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 4px;text-align:center;font-size:12px;font-weight:600}
+.qa i{display:block;font-style:normal;font-size:24px;margin-bottom:4px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.tile .l{color:var(--mut);font-size:12px}.tile .v{font-size:21px;font-weight:700;margin-top:2px}.tile .s{color:var(--mut);font-size:12px}
+h3{margin:18px 2px 8px;font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+h3 button{color:var(--acc);text-transform:none;letter-spacing:0;font-size:14px}
+.rec{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.rec:last-child{border-bottom:0}
+.ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:none}
+.rec .m{flex:1;min-width:0}.rec .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rec .s{color:var(--mut);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec .c{font-weight:700;white-space:nowrap}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.chip{padding:8px 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);white-space:nowrap;font-size:14px;font-weight:500}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.bar{height:8px;border-radius:9px;background:var(--card2);overflow:hidden;margin:8px 0}
+.bar>div{height:100%;border-radius:9px;background:var(--ok)}
+.bar.soon>div{background:var(--warn)}.bar.over>div{background:var(--bad)}
+.mut{color:var(--mut)}.sm{font-size:13px}
+.flex{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}.grow{flex:1}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;background:var(--card);background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav>div{display:flex;width:100%;max-width:600px}
+nav button{flex:1;padding:9px 0 8px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:22px}
+nav button{position:relative}
+nav button.on{color:var(--acc);font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal>span{font-size:12px;color:var(--mut);padding:2px 0}
+.cd{position:relative;height:42px;border-radius:12px;font-size:15px;font-weight:500;display:grid;place-items:center;background:var(--card2)}
+.cd i{position:absolute;bottom:5px;left:50%;margin-left:-3px;width:6px;height:6px;border-radius:50%}
+.cd.tod{box-shadow:inset 0 0 0 2px var(--acc)}
+.cd.sel{background:var(--acc);color:#fff}
+.dt{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 8px}
+.bdg{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;font-style:normal;line-height:1}
+.fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:32px;box-shadow:var(--sh);z-index:25;display:grid;place-items:center;line-height:1}
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fi .15s}
+@keyframes fi{from{opacity:0}}@keyframes su{from{transform:translateY(40px);opacity:.6}}
+.sh{background:var(--bg);width:100%;max-width:600px;max-height:calc(100vh - env(safe-area-inset-top,0px) - 72px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 72px);border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:su .2s}
+.shh{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 10px;font-size:18px}
+.x{width:40px;height:40px;border-radius:50%;background:var(--card2);color:var(--txt);font-size:18px;flex:none}
+.shb{overflow-y:auto;padding:4px 16px calc(24px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.f{margin-bottom:12px}.f label{display:block;font-size:13px;color:var(--mut);margin-bottom:5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.cats button{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:9px 4px;font-size:12px;font-weight:600;text-align:center}
+.cats button i{display:block;font-style:normal;font-size:22px}
+.cats button.on{border-color:var(--acc);background:var(--card2);background:color-mix(in srgb,var(--acc) 14%,var(--card))}
+.sw{display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--card2);border-radius:12px;border:1px solid var(--line)}
+.sw input{width:22px;height:22px;flex:none}
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222c;color:#fff;backdrop-filter:blur(10px);padding:10px 18px;border-radius:99px;z-index:99;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:90%;text-align:center}
+#toast.on{opacity:1}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.empty b{display:block;font-size:44px;margin-bottom:6px}
+.photo{width:100%;border-radius:14px;margin:8px 0;display:block}
+.thumb{width:72px;height:72px;border-radius:12px;object-fit:cover}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);gap:12px}.kv:last-child{border:0}.kv span:first-child{color:var(--mut)}.kv span:last-child{text-align:right}
+.alert{border-left:4px solid var(--warn);display:flex;gap:10px;align-items:center;width:100%;text-align:left}
+.alert.over{border-left-color:var(--bad)}
+svg text{fill:var(--mut);font-size:9px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mut);margin-top:8px}.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+.hbar{margin:8px 0}.hbar .top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px}
+.hbar .b{height:8px;border-radius:8px;background:var(--card2);overflow:hidden}.hbar .b>div{height:100%;border-radius:8px}
+#print{display:none}
+@media print{body{background:#fff;color:#000;padding:0}#app,nav,.fab,#toast,.ov{display:none!important}#print{display:block;color:#000;font-size:12px}#print table{width:100%;border-collapse:collapse}#print td,#print th{border:1px solid #bbb;padding:4px 6px;text-align:left}#print h1,#print h2{margin:10px 0 6px}}
+</style>
+<script>
+(function(){function show(m){try{var d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:999;background:#5a1515;color:#fff;padding:10px;border-radius:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:50vh;overflow:auto';document.body.appendChild(d)}d.textContent+=m+'\n'}catch(e){}}
+window.__show=show;
+setTimeout(function(){if(!window.__boot)show('Скрипт приложения не запустился: в этом просмотрщике JS заблокирован или не поддерживается. Откройте файл через Safari.');else if(!window.__ready)show('Приложение зависло при запуске.')},3500);
+window.addEventListener('error',function(e){if(!e.lineno&&/^Script error/i.test(e.message||''))return;show('Ошибка: '+e.message+' (строка '+e.lineno+')')});
+window.addEventListener('unhandledrejection',function(e){show('Ошибка: '+(e.reason&&e.reason.message||e.reason))});
+})();
+</script>
+</head>
+<body>
+<div id="app"><header id="top"></header><main id="view"><div style="padding:70px 20px;text-align:center;color:#8b96a5;font-size:15px">Загрузка…<noscript><br>Включите JavaScript в браузере</noscript></div></main></div>
+<button class="fab" id="fab" data-a="addRec" data-t="service" aria-label="Добавить запись">+</button>
+<nav><div id="tabs"></div></nav>
+<div id="toast"></div>
+<div id="print"></div>
+
+<script>"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+window.__boot = 1;
+const CATS = {
+  service: { n: "Расходники / ТО", i: "🔧", c: "#4f8cff" },
+  repair: { n: "Ремонт", i: "🛠️", c: "#ff6b6b" },
+  fuel: { n: "Заправка", i: "⛽", c: "#ffb02e" },
+  tires: { n: "Шины / колёса", i: "🛞", c: "#9b6bff" },
+  wash: { n: "Мойка / уход", i: "🧼", c: "#2ec4b6" },
+  docs: { n: "Страховка / налоги", i: "📄", c: "#7bd36b" },
+  fine: { n: "Штрафы", i: "🚫", c: "#e0567a" },
+  parts: { n: "Запчасти / тюнинг", i: "🧩", c: "#f08a4b" },
+  other: { n: "Другое", i: "📝", c: "#8b98a9" }
+};
+const PRESETS = {
+  service: ["Масло двигателя", "Масляный фильтр", "Воздушный фильтр", "Салонный фильтр", "Топливный фильтр", "Свечи зажигания", "Тормозные колодки передние", "Тормозные колодки задние", "Тормозные диски", "Тормозная жидкость", "Антифриз", "Масло КПП", "Масло в раздатке/редукторе", "Ремень / цепь ГРМ", "Ремень навесного", "Аккумулятор", "Щётки стеклоочистителя", "Жидкость ГУР", "Лампы", "Диагностика"],
+  tires: ["Шиномонтаж сезонный", "Балансировка", "Замена шин", "Ремонт прокола", "Развал-схождение"],
+  repair: ["Подвеска", "Двигатель", "Коробка передач", "Электрика", "Кузовной ремонт", "Выхлопная система", "Кондиционер"],
+  wash: ["Мойка", "Химчистка", "Полировка", "Керамика / воск"],
+  docs: ["ОСАГО", "КАСКО", "Транспортный налог", "Техосмотр / диагностическая карта"],
+  parts: [],
+  other: []
+};
+const DEFAULT_REM = [
+  ["Масло двигателя", 1e4, 12],
+  ["Масляный фильтр", 1e4, 12],
+  ["Воздушный фильтр", 15e3, 12],
+  ["Салонный фильтр", 15e3, 12],
+  ["Топливный фильтр", 3e4, 24],
+  ["Свечи зажигания", 3e4, 36],
+  ["Тормозные колодки передние", 4e4, 0],
+  ["Тормозная жидкость", 0, 24],
+  ["Антифриз", 0, 60],
+  ["Масло КПП", 6e4, 48],
+  ["Ремень / цепь ГРМ", 9e4, 60],
+  ["Аккумулятор", 0, 48],
+  ["Щётки стеклоочистителя", 0, 12],
+  ["Шиномонтаж сезонный", 0, 6]
+];
+const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const MS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const $ = (s, e = document) => e.querySelector(s), $$ = (s, e = document) => [...e.querySelectorAll(s)];
+const esc = (s) => String(s != null ? s : "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const today = () => iso(/* @__PURE__ */ new Date());
+const D = (s) => /* @__PURE__ */ new Date(s + "T00:00:00");
+const fmtDate = (s) => s ? s.slice(8, 10) + "." + s.slice(5, 7) + "." + s.slice(0, 4) : "—";
+const daysDiff = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+const addMonths = (s, m) => {
+  const d = D(s);
+  d.setMonth(d.getMonth() + m);
+  return iso(d);
+};
+const nf0 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }), nf1 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }), nf2 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
+const cur = () => S.settings.currency || "₽";
+const money = (n) => nf0.format(Math.round(n || 0)) + " " + cur();
+const km = (n) => n == null || isNaN(n) ? "—" : nf0.format(n) + " км";
+const pn = (v) => {
+  const x = parseFloat(String(v != null ? v : "").replace(",", ".").replace(/\s/g, ""));
+  return isNaN(x) ? null : x;
+};
+const norm = (s) => String(s || "").trim().toLowerCase().replace(/ё/g, "е");
+const plural = (n, a, b, c) => {
+  n = Math.abs(n) % 100;
+  const m = n % 10;
+  return n > 10 && n < 20 ? c : m > 1 && m < 5 ? b : m === 1 ? a : c;
+};
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("car-diary2", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(k) {
+  const d = await idb();
+  return new Promise((res, rej) => {
+    const q = d.transaction("kv").objectStore("kv").get(k);
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error);
+  });
+}
+async function idbSet(k, v) {
+  const d = await idb();
+  return new Promise((res, rej) => {
+    const t = d.transaction("kv", "readwrite");
+    t.objectStore("kv").put(v, k);
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  });
+}
+const blank = () => ({ v: 1, settings: { currency: "₽", theme: "auto", lastBackup: null }, cars: [], records: [], reminders: [], docs: [], places: [], trips: [], active: null });
+let S = blank(), saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    S.savedAt = Date.now();
+    let ok = false;
+    try {
+      await withTimeout(idbSet("state", JSON.parse(JSON.stringify(S))), 4e3);
+      ok = true;
+    } catch (e) {
+    }
+    try {
+      localStorage.setItem("cd2_state", JSON.stringify(S));
+      ok = true;
+    } catch (e) {
+    }
+    if (!ok) toast("⚠️ Не удалось сохранить — сделайте экспорт!");
+  }, 120);
+}
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise(function(_, rej) {
+    setTimeout(function() {
+      rej(new Error("timeout"));
+    }, ms);
+  })]);
+}
+async function load() {
+  let a = null, b = null;
+  try {
+    a = JSON.parse(localStorage.getItem("cd2_state") || "null");
+  } catch (e) {
+  }
+  try {
+    b = await withTimeout(idbGet("state"), 1500);
+  } catch (e) {
+  }
+  const ok = (x) => x && Array.isArray(x.cars);
+  const d = ok(a) && ok(b) ? (a.savedAt || 0) > (b.savedAt || 0) ? a : b : ok(b) ? b : ok(a) ? a : null;
+  if (d) {
+    S = Object.assign(blank(), d);
+    S.settings = Object.assign(blank().settings, d.settings || {});
+  }
+  try {
+    navigator.storage && navigator.storage.persist && navigator.storage.persist();
+  } catch (e) {
+  }
+}
+const ui = { view: "home", q: "", cat: "all", period: "year" };
+const curCar = () => S.cars.find((c) => c.id === S.active) || S.cars[0] || null;
+const carRecs = (id) => S.records.filter((r) => r.carId === id).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0));
+function applyTheme() {
+  document.documentElement.dataset.theme = S.settings.theme || "auto";
+}
+let tT;
+function toast(m) {
+  const t = $("#toast");
+  t.textContent = m;
+  t.classList.add("on");
+  clearTimeout(tT);
+  tT = setTimeout(() => t.classList.remove("on"), 2400);
+}
+function fuelSegs(carId) {
+  const fr = S.records.filter((r) => r.carId === carId && r.type === "fuel" && r.odo != null && r.liters > 0).sort((a, b) => a.odo - b.odo || a.date.localeCompare(b.date));
+  let last = null, acc = 0;
+  const segs = [];
+  for (const r of fr) {
+    if (last !== null) acc += r.liters;
+    if (r.full) {
+      if (last !== null && r.odo > last) {
+        const d = r.odo - last;
+        segs.push({ rid: r.id, date: r.date, odo: r.odo, km: d, l: acc, l100: acc / d * 100 });
+      }
+      last = r.odo;
+      acc = 0;
+    }
+  }
+  return segs;
+}
+function periodRange(kind, f, t) {
+  const td = today();
+  if (kind === "month") return { from: td.slice(0, 8) + "01", to: td };
+  if (kind === "year") return { from: td.slice(0, 5) + "01-01", to: td };
+  if (kind === "range") {
+    const a = f || td.slice(0, 8) + "01", b = t || td;
+    return a <= b ? { from: a, to: b } : { from: b, to: a };
+  }
+  return { from: "0000-00-00", to: "9999-99-99" };
+}
+const statPeriod = () => periodRange(ui.period, ui.pFrom, ui.pTo);
+function stats(car, days) {
+  const rg = days && typeof days === "object" ? days : null;
+  const cutoff = rg ? rg.from : days ? iso(new Date(Date.now() - days * 864e5)) : "0000-00-00", upper = rg ? rg.to : "9999-99-99";
+  const rs = S.records.filter((r) => r.carId === car.id && r.date >= cutoff && r.date <= upper);
+  const total = rs.reduce((s, r) => s + (r.cost || 0), 0);
+  const byCat = {};
+  rs.forEach((r) => byCat[r.type] = (byCat[r.type] || 0) + (r.cost || 0));
+  const odos = rs.map((r) => r.odo).filter((x) => x != null);
+  const dist = odos.length > 1 ? Math.max(...odos) - Math.min(...odos) : null;
+  const segs = fuelSegs(car.id).filter((s) => s.date >= cutoff && s.date <= upper);
+  const sk = segs.reduce((s, x) => s + x.km, 0), sl = segs.reduce((s, x) => s + x.l, 0);
+  const fl = rs.filter((r) => r.type === "fuel" && r.liters > 0 && r.cost > 0);
+  const ppl = fl.length ? fl.reduce((s, r) => s + r.cost, 0) / fl.reduce((s, r) => s + r.liters, 0) : null;
+  return { rs, total, byCat, dist, l100: sk ? sl / sk * 100 : null, ppl, perKm: dist && dist > 0 ? total / dist : null, fuelCost: byCat.fuel || 0 };
+}
+function kmPerDay(car) {
+  const pts = S.records.filter((r) => r.carId === car.id && r.odo != null).map((r) => ({ d: r.date, o: r.odo })).sort((a2, b2) => a2.d.localeCompare(b2.d));
+  if (pts.length < 2) return null;
+  const a = pts[0], b = pts[pts.length - 1], days = daysDiff(a.d, b.d);
+  if (days < 30 || b.o <= a.o) return null;
+  return (b.o - a.o) / days;
+}
+function remStatus(car, r) {
+  var _a;
+  const key = norm(r.title);
+  const recs = S.records.filter((x) => x.carId === car.id && (x.items || []).some((i) => norm(i) === key)).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0));
+  const last = recs[0];
+  const lastDate = last ? last.date : r.baseDate || null, lastOdo = last ? last.odo : (_a = r.baseOdo) != null ? _a : null;
+  const out = { r, lastDate, lastOdo, fromHistory: !!last, level: "none", leftKm: null, leftDays: null, nextOdo: null, nextDate: null, pct: 0, est: null };
+  if (r.km && lastOdo != null) {
+    out.nextOdo = lastOdo + r.km;
+    out.leftKm = out.nextOdo - (car.odo || 0);
+    out.pct = Math.max(out.pct, ((car.odo || 0) - lastOdo) / r.km);
+  }
+  if (r.months && lastDate) {
+    out.nextDate = addMonths(lastDate, r.months);
+    out.leftDays = daysDiff(today(), out.nextDate);
+    const tot = daysDiff(lastDate, out.nextDate);
+    out.pct = Math.max(out.pct, tot > 0 ? daysDiff(lastDate, today()) / tot : 0);
+  }
+  if (out.leftKm == null && out.leftDays == null) return out;
+  const kd = kmPerDay(car);
+  if (out.leftKm != null && kd && out.leftKm > 0) out.est = iso(new Date(Date.now() + out.leftKm / kd * 864e5));
+  const over = out.leftKm != null && out.leftKm < 0 || out.leftDays != null && out.leftDays < 0;
+  const soon = out.leftKm != null && out.leftKm <= Math.max(500, r.km * 0.1) || out.leftDays != null && out.leftDays <= 30;
+  out.level = over ? "over" : soon ? "soon" : "ok";
+  return out;
+}
+const lvlRank = { over: 0, soon: 1, ok: 2, none: 3 };
+function remList(car) {
+  return S.reminders.filter((r) => r.carId === car.id).map((r) => remStatus(car, r)).sort((a, b) => {
+    var _a, _b;
+    return lvlRank[a.level] - lvlRank[b.level] || ((_a = a.leftKm) != null ? _a : 1e9) - ((_b = b.leftKm) != null ? _b : 1e9);
+  });
+}
+function dueText(s) {
+  const p = [];
+  if (s.leftKm != null) p.push(s.leftKm < 0 ? `просрочено на ${km(-s.leftKm)}` : `ещё ${km(s.leftKm)}`);
+  if (s.leftDays != null) p.push(s.leftDays < 0 ? `просрочено на ${-s.leftDays} ${plural(-s.leftDays, "день", "дня", "дней")}` : s.leftDays === 0 ? "срок сегодня" : `через ${s.leftDays} ${plural(s.leftDays, "день", "дня", "дней")}`);
+  return p.join(" · ") || "нет данных";
+}
+function docStatus(d) {
+  const left = daysDiff(today(), d.expires);
+  return { left, level: left < 0 ? "over" : left <= 30 ? "soon" : "ok" };
+}
+function alerts(car) {
+  const a = [];
+  remList(car).filter((s) => s.level === "over" || s.level === "soon").forEach((s) => a.push({ lvl: s.level, t: s.r.title, s: dueText(s), act: "remEdit", id: s.r.id }));
+  S.docs.filter((d) => d.carId === car.id).forEach((d) => {
+    const st = docStatus(d);
+    if (st.level !== "ok") a.push({ lvl: st.level, t: d.title, s: st.left < 0 ? `истёк ${fmtDate(d.expires)}` : `до ${fmtDate(d.expires)} (${st.left} дн.)`, act: "docEdit", id: d.id });
+  });
+  return a.sort((x, y) => (x.lvl === "over" ? 0 : 1) - (y.lvl === "over" ? 0 : 1));
+}
+function allAlerts() {
+  const out = [];
+  S.cars.forEach((c) => alerts(c).forEach((a) => out.push(Object.assign({ car: c.name }, a))));
+  return out;
+}
+function setBadge(n) {
+  try {
+    const f = n > 0 ? navigator.setAppBadge && navigator.setAppBadge(n) : navigator.clearAppBadge && navigator.clearAppBadge();
+    if (f && f.catch) f.catch(() => {
+    });
+  } catch (e) {
+  }
+}
+function dailyAlert() {
+  if (!S.cars.length || S.settings.alertPopup === false || S.settings.alertDay === today()) return;
+  const al = allAlerts();
+  if (!al.length) return;
+  S.settings.alertDay = today();
+  save();
+  sheet("⚠️ Пора обратить внимание", al.slice(0, 8).map((a) => `<div class="kv"><span>${a.lvl === "over" ? "🔴" : "🟠"} ${esc(a.t)}${S.cars.length > 1 ? ' <span class="mut sm">· ' + esc(a.car) + "</span>" : ""}</span><span class="sm">${esc(a.s)}</span></div>`).join("") + (al.length > 8 ? `<div class="sm mut" style="margin:8px 0">…и ещё ${al.length - 8}</div>` : "") + `<div class="two" style="margin-top:14px"><button class="btn" data-a="tab" data-v="service">Открыть «Сервис»</button><button class="btn sec" data-a="close">Понятно</button></div>`);
+}
+function buildIcs() {
+  const esc2 = (t) => String(t || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  const ymd = (x) => x.replace(/-/g, ""), nd = (x) => iso(new Date(D(x).getTime() + 864e5));
+  const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const ev = [];
+  const add = (uid, date, title, desc, early) => {
+    if (!date || date < today()) return;
+    const al = (early ? ["-P29DT15H"] : []).concat(["-P6DT15H", "-PT15H", "PT9H"]);
+    ev.push(["BEGIN:VEVENT", "UID:" + uid + "@avto2", "DTSTAMP:" + stamp, "DTSTART;VALUE=DATE:" + ymd(date), "DTEND;VALUE=DATE:" + ymd(nd(date)), "SUMMARY:" + esc2(title), "DESCRIPTION:" + esc2(desc), "TRANSP:TRANSPARENT"].concat(al.map((t) => "BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:" + esc2(title) + "\r\nTRIGGER:" + t + "\r\nEND:VALARM"), ["END:VEVENT"]).join("\r\n"));
+  };
+  S.cars.forEach((c) => {
+    remList(c).forEach((st) => {
+      const date = st.nextDate || st.est;
+      add("rem-" + st.r.id, date, "🔧 " + st.r.title + " · " + c.name, [dueText(st), st.nextOdo != null ? "Пробег замены: " + km(st.nextOdo) : "", !st.nextDate && st.est ? "Дата прикидочная, по вашему обычному пробегу" : ""].filter(Boolean).join(". "), false);
+    });
+    S.docs.filter((d) => d.carId === c.id).forEach((d) => add("doc-" + d.id, d.expires, "📄 " + d.title + " · " + c.name, "Срок действия до " + fmtDate(d.expires), true));
+  });
+  return { n: ev.length, text: ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//avto2//RU", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Дневник авто 2"].concat(ev, ["END:VCALENDAR"]).join("\r\n") + "\r\n" };
+}
+async function exportIcs() {
+  const r = buildIcs();
+  if (!r.n) return toast("Нет ближайших сроков для календаря");
+  const name = "avto2-sroki.ics", blob = new Blob([r.text], { type: "text/calendar;charset=utf-8" });
+  try {
+    const f = new File([blob], name, { type: "text/calendar" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      await navigator.share({ files: [f], title: "Сроки обслуживания" });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") return;
+  }
+  download(blob, name);
+  toast("Файл календаря: " + r.n);
+}
+function render() {
+  applyTheme();
+  const car = curCar();
+  const tabs = [["home", "🏠", "Главная"], ["history", "📋", "История"], ["service", "🔔", "Сервис"], ["stats", "📊", "Статистика"], ["trips", "🚕", "Рейсы"], ["more", "⚙️", "Ещё"]];
+  const nAl = allAlerts().length;
+  setBadge(nAl);
+  $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "service" && nAl ? '<b class="bdg">' + nAl + "</b>" : ""}${t[0] === "trips" && (tripGet() || {}).state === "run" ? " 🟢" : ""}</button>`).join("");
+  $("#fab").style.display = car && (ui.view === "home" || ui.view === "history") ? "grid" : "none";
+  $("#top").innerHTML = car ? `<button class="carsel" data-a="cars"><span>🚗 ${esc(car.name)}</span> <small class="mut">▾</small></button><span class="pill">${km(car.odo)}</span>` : `<b style="font-size:18px">🚗 Дневник авто 2</b>`;
+  const views = { home, history, service, stats: statsView, trips: tripsView, more };
+  $("#view").innerHTML = !car && ui.view !== "more" ? welcome() : views[ui.view]();
+  if (ui.view === "history") bindHist();
+  if (ui.view === "stats") tripCalc();
+  if (ui.view === "trips") tripUI();
+}
+function welcome() {
+  return `<div class="empty" style="padding-top:60px"><b>🚗</b><h2 style="color:var(--txt);margin:6px 0">Дневник вашего авто</h2><p>Добавьте машину — и записывайте замены расходников, ремонты, заправки и расходы. Всё хранится на телефоне.</p><div style="display:grid;gap:10px;margin-top:20px"><button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button><button class="btn sec full" data-a="ftImport">⛽ Перенести из FuelTracker</button><label class="btn sec full">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label><button class="btn sec full" data-a="demo">✨ Посмотреть на демо-данных</button></div></div>`;
+}
+const QA_N = { fuel: "Заправка", service: "Замена", repair: "Ремонт", tires: "Шины", wash: "Мойка", docs: "Страховка", fine: "Штраф", parts: "Запчасти", other: "Другое" };
+function topCats(car) {
+  const def = ["fuel", "service", "repair", "wash", "tires", "parts", "docs", "fine", "other"], cut = iso(new Date(Date.now() - 365 * 864e5)), sc = {};
+  S.records.filter((r) => r.carId === car.id && CATS[r.type]).forEach((r) => sc[r.type] = (sc[r.type] || 0) + (r.date >= cut ? 1e3 : 0) + 1);
+  return def.slice().sort((a, b) => (sc[b] || 0) - (sc[a] || 0) || def.indexOf(a) - def.indexOf(b)).slice(0, 3);
+}
+function home() {
+  const car = curCar(), m = stats(car, periodRange("month")), y = stats(car, periodRange("year")), al = alerts(car), rs = carRecs(car.id).slice(0, 5), segs = fuelSegs(car.id);
+  const lb = S.settings.lastBackup, needBk = S.records.length >= 3 && (!lb || daysDiff(lb, today()) > 30);
+  return `<div class="card hero"><div class="row"><div class="av">${car.photo ? `<img src="${car.photo}">` : "🚗"}</div><div class="grow"><h2>${esc(car.name)}</h2><div class="sub">${esc([car.make, car.year, car.plate].filter(Boolean).join(" · ")) || "&nbsp;"}</div></div></div>
+ <div class="odo">${nf0.format(car.odo || 0)}<small>км</small><span class="grow"></span><button class="btn glass" data-a="odo">Обновить</button></div></div>
+ ${needBk ? `<button class="card alert" style="width:100%" data-a="tab" data-v="more"><span style="font-size:22px">💾</span><div><b>Сделайте резервную копию</b><div class="mut sm">${lb ? `Последняя — ${fmtDate(lb)}` : "Копий ещё не было"}. Данные лежат только в памяти телефона.</div></div></button>` : ""}
+ ${al.length ? `<h3>Требует внимания</h3>` + al.slice(0, 4).map((a) => `<button class="card alert ${a.lvl}" data-a="${a.act}" data-id="${a.id}"><span style="font-size:22px">${a.lvl === "over" ? "🔴" : "🟠"}</span><div><b>${esc(a.t)}</b><div class="mut sm">${esc(a.s)}</div></div></button>`).join("") + (al.length > 4 ? `<button class="sm" style="color:var(--acc);margin:0 4px 10px" data-a="tab" data-v="service">Ещё ${al.length - 4} →</button>` : "") : ""}
+ <div class="grid4" style="margin-top:12px">${topCats(car).map((k) => `<button class="qa" data-a="addRec" data-t="${k}" data-lock="1"><i>${CATS[k].i}</i>${QA_N[k]}</button>`).join("")}<button class="qa" data-a="addRec" data-t="service"><i>➕</i>Ещё</button></div>
+ <div class="tiles"><div class="tile"><div class="l">За ${MONTH_L[(/* @__PURE__ */ new Date()).getMonth()]}</div><div class="v">${money(m.total)}</div><div class="s">с начала года ${money(y.total)}</div></div>
+ <div class="tile"><div class="l">Расход топлива</div><div class="v">${segs.length ? nf1.format(stats(car, 0).l100) + " л" : "—"}</div><div class="s">на 100 км, в среднем</div></div></div>
+ <h3>Последние записи <button data-a="tab" data-v="history">Все →</button></h3>
+ <div class="card" style="padding:4px 14px">${rs.length ? rs.map((r) => recRow(r)).join("") : `<div class="empty"><b>📝</b>Записей пока нет. Нажмите «+»</div>`}</div>`;
+}
+function recTitle(r) {
+  return r.type === "fuel" ? `Заправка${r.liters ? " · " + nf1.format(r.liters) + " л" : ""}` : r.title || CATS[r.type].n;
+}
+function recRow(r, segMap) {
+  const c = CATS[r.type] || CATS.other, sg = segMap && segMap[r.id];
+  const sub = [fmtDate(r.date), r.odo != null ? km(r.odo) : null, r.type === "fuel" && r.liters && r.cost ? nf1.format(r.cost / r.liters) + " " + cur() + "/л" : null, sg ? nf1.format(sg.l100) + " л/100" : null, r.place].filter(Boolean).join(" · ");
+  return `<button class="rec" data-a="recOpen" data-id="${r.id}"><div class="ic" style="background:${c.c}26">${c.i}</div><div class="m"><div class="t">${esc(recTitle(r))}</div><div class="s">${esc(sub)}</div></div><div class="c">${r.cost ? money(r.cost) : ""}</div></button>`;
+}
+function history() {
+  const car = curCar();
+  return `<div class="f"><input id="q" type="search" placeholder="🔍 Поиск: масло, колодки, сервис…" value="${esc(ui.q)}"></div>
+ <div class="chips"><button class="chip ${ui.cat === "all" ? "on" : ""}" data-a="cat" data-c="all">Все</button>${Object.entries(CATS).map(([k, c]) => `<button class="chip ${ui.cat === k ? "on" : ""}" data-a="cat" data-c="${k}">${c.i} ${c.n}</button>`).join("")}</div>
+ <div id="hl">${histList(car)}</div>`;
+}
+function histList(car) {
+  const q = norm(ui.q);
+  const segMap = {};
+  fuelSegs(car.id).forEach((s) => segMap[s.rid] = s);
+  const rs = carRecs(car.id).filter((r) => (ui.cat === "all" || r.type === ui.cat) && (!q || norm([r.title, r.notes, r.place, (r.items || []).join(" "), CATS[r.type].n].join(" ")).includes(q)));
+  if (!rs.length) return `<div class="empty"><b>🔍</b>Ничего не найдено</div>`;
+  const g = {};
+  rs.forEach((r) => (g[r.date.slice(0, 7)] = g[r.date.slice(0, 7)] || []).push(r));
+  return Object.keys(g).sort().reverse().map((k) => {
+    const t = g[k].reduce((s, r) => s + (r.cost || 0), 0);
+    return `<h3>${MONTHS[+k.slice(5) - 1]} ${k.slice(0, 4)}<span>${money(t)}</span></h3><div class="card" style="padding:4px 14px">${g[k].map((r) => recRow(r, segMap)).join("")}</div>`;
+  }).join("");
+}
+function bindHist() {
+  const q = $("#q");
+  if (q) q.oninput = () => {
+    ui.q = q.value;
+    $("#hl").innerHTML = histList(curCar());
+  };
+}
+function remCard(s) {
+  const r = s.r, w = Math.min(100, Math.round(s.pct * 100));
+  const lbl = { over: "Просрочено", soon: "Скоро", ok: "В норме", none: "Нет данных" }[s.level];
+  return `<div class="card"><div class="flex between"><button class="grow" style="text-align:left" data-a="remEdit" data-id="${r.id}"><b>${esc(r.title)}</b></button><span class="pill ${s.level === "over" ? "over" : s.level}">${lbl}</span></div>
+ ${s.level !== "none" ? `<div class="bar ${s.level}"><div style="width:${w}%"></div></div>` : ""}
+ <div class="sm">${esc(dueText(s))}</div>
+ <div class="sm mut" style="margin-top:4px">Интервал: ${[r.km ? km(r.km) : null, r.months ? r.months + " мес." : null].filter(Boolean).join(" / ") || "—"}${s.lastDate || s.lastOdo != null ? ` · Последний раз: ${s.lastDate ? fmtDate(s.lastDate) : ""} ${s.lastOdo != null ? km(s.lastOdo) : ""}` : ""}</div>
+ ${s.nextOdo != null || s.nextDate ? `<div class="sm mut">Следующий: ${[s.nextOdo != null ? km(s.nextOdo) : null, s.nextDate ? fmtDate(s.nextDate) : null].filter(Boolean).join(" или ")}${s.est ? ` · по вашему темпу ≈ ${fmtDate(s.est)}` : ""}</div>` : ""}
+ <div class="flex" style="margin-top:10px"><button class="btn sec grow" data-a="addRec" data-t="service" data-lock="1" data-item="${esc(r.title)}">✅ Заменил</button><button class="btn sec" data-a="remEdit" data-id="${r.id}">✏️</button></div></div>`;
+}
+const MONTH_L = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+function calEvents() {
+  const ev = [];
+  S.cars.forEach((c) => {
+    remList(c).forEach((st) => {
+      const date = st.nextDate || st.est;
+      if (date) ev.push({ date, t: st.r.title, car: c.name, lvl: st.level, s: dueText(st) + (!st.nextDate ? " · дата примерная" : ""), act: "remEdit", id: st.r.id, kind: "🔧" });
+    });
+    S.docs.filter((d) => d.carId === c.id).forEach((d) => {
+      const ds = docStatus(d);
+      ev.push({ date: d.expires, t: d.title, car: c.name, lvl: ds.level, s: ds.left < 0 ? "истёк " + fmtDate(d.expires) : "действует до " + fmtDate(d.expires), act: "docEdit", id: d.id, kind: "📄" });
+    });
+  });
+  return ev;
+}
+function calCard() {
+  const td = today(), ym = ui.calM || td.slice(0, 7), y = +ym.slice(0, 4), mo = +ym.slice(5, 7), ev = calEvents();
+  const dim = new Date(y, mo, 0).getDate(), off = (new Date(y, mo - 1, 1).getDay() + 6) % 7, byDay = {};
+  ev.forEach((e) => {
+    if (e.date.slice(0, 7) === ym) (byDay[e.date] = byDay[e.date] || []).push(e);
+  });
+  const col = { over: "var(--bad)", soon: "var(--warn)", ok: "var(--ok)", none: "var(--mut)" };
+  let cells = "";
+  for (let i = 0; i < off; i++) cells += "<span></span>";
+  for (let d = 1; d <= dim; d++) {
+    const ds = ym + "-" + pad(d), es = byDay[ds] || [], sel = ui.calSel === ds, isT = ds === td;
+    const worst = es.length ? es.map((e) => e.lvl).sort((a, b) => lvlRank[a] - lvlRank[b])[0] : null;
+    cells += `<button class="cd ${sel ? "sel" : ""} ${isT ? "tod" : ""}" data-a="calDay" data-d="${ds}">${d}${worst ? `<i style="background:${col[worst]}"></i>` : ""}</button>`;
+  }
+  const sel = ui.calSel && ui.calSel.slice(0, 7) === ym ? byDay[ui.calSel] || [] : null;
+  const list = sel ? sel.length ? sel.map((e) => `<button class="rec" data-a="${e.act}" data-id="${e.id}"><div class="ic" style="background:var(--card2)">${e.kind}</div><div class="m"><div class="t">${esc(e.t)}</div><div class="s">${esc(e.car)} · ${esc(e.s)}</div></div></button>`).join("") : '<div class="sm mut" style="padding:8px 0">На эту дату ничего не запланировано</div>' : '<div class="sm mut" style="padding:8px 0">Нажмите на дату, чтобы увидеть, что на неё приходится</div>';
+  const monthEv = Object.keys(byDay).length;
+  return `<div class="card"><div class="flex between" style="margin-bottom:8px"><button class="btn sec" data-a="calNav" data-dir="-1" style="padding:8px 14px">‹</button><b style="text-transform:capitalize">${MONTH_L[mo - 1]} ${y}</b><button class="btn sec" data-a="calNav" data-dir="1" style="padding:8px 14px">›</button></div>
+ <div class="cal"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>${cells}</div>
+ <div class="sm mut" style="margin:8px 0 2px"><i class="dt" style="background:var(--bad)"></i> просрочено <i class="dt" style="background:var(--warn)"></i> скоро <i class="dt" style="background:var(--ok)"></i> в норме${ym !== td.slice(0, 7) ? ' · <button style="color:var(--acc)" data-a="calNav" data-dir="0">к сегодня</button>' : ""}</div>
+ <div style="margin-top:6px">${list}</div></div>`;
+}
+function service() {
+  const car = curCar(), rl = remList(car), docs = S.docs.filter((d) => d.carId === car.id).sort((a, b) => a.expires.localeCompare(b.expires));
+  return `<button class="card flex between" style="width:100%;text-align:left" data-a="calToggle"><b>📅 Календарь сроков</b><span class="mut" style="font-size:18px">${ui.calOpen ? "▴" : "▾"}</span></button>${ui.calOpen ? calCard() : ""}
+ <h3>Расходники и интервалы <button data-a="remAdd">+ Добавить</button></h3>
+ ${rl.length ? rl.map(remCard).join("") : `<div class="card empty"><b>🔔</b>Задайте интервалы замены (масло, фильтры, ГРМ…) — приложение покажет, что и когда менять.<div style="margin-top:12px;display:grid;gap:8px"><button class="btn" data-a="remDefaults">Добавить стандартный набор</button><button class="btn sec" data-a="remAdd">Добавить свой</button></div></div>`}
+ <h3>Документы и сроки <button data-a="docAdd">+ Добавить</button></h3>
+ ${docs.length ? docs.map((d) => {
+    const st = docStatus(d);
+    return `<button class="card flex between" style="width:100%;text-align:left" data-a="docEdit" data-id="${d.id}"><div><b>${esc(d.title)}</b><div class="mut sm">до ${fmtDate(d.expires)}</div></div><span class="pill ${st.level}">${st.left < 0 ? "истёк" : st.left + " дн."}</span></button>`;
+  }).join("") : `<div class="card empty" style="padding:18px">ОСАГО, техосмотр, права, страховка — добавьте срок, и он появится в напоминаниях.</div>`}`;
+}
+function chartMonths(car) {
+  const now = /* @__PURE__ */ new Date(), ms = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    ms.push(d.getFullYear() + "-" + pad(d.getMonth() + 1));
+  }
+  const data = ms.map((k) => {
+    const o = {};
+    S.records.filter((r) => r.carId === car.id && r.date.slice(0, 7) === k).forEach((r) => o[r.type] = (o[r.type] || 0) + (r.cost || 0));
+    return o;
+  });
+  const tot = data.map((o) => Object.values(o).reduce((a, b) => a + b, 0)), mx = Math.max(1, ...tot);
+  const W = 340, H = 170, bw = 17, gap = (W - 30 - 12 * bw) / 11;
+  let s = "";
+  data.forEach((o, i) => {
+    let y = H;
+    const x = 30 + i * (bw + gap);
+    Object.keys(CATS).forEach((c) => {
+      if (!o[c]) return;
+      const h = o[c] / mx * (H - 14);
+      y -= h;
+      s += `<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 1)}" rx="2" fill="${CATS[c].c}"/>`;
+    });
+    s += `<text x="${x + bw / 2}" y="${H + 12}" text-anchor="middle">${MS[+ms[i].slice(5) - 1]}</text>`;
+  });
+  s += `<text x="0" y="12">${nf0.format(mx)}</text><line x1="28" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>`;
+  return `<svg viewBox="0 0 ${W} ${H + 18}" width="100%">${s}</svg>`;
+}
+function chartLine(pts, fmt, color) {
+  if (pts.length < 2) return `<div class="empty" style="padding:16px">Нужно минимум 2 заправки «до полного бака»</div>`;
+  const W = 340, H = 130, ys = pts.map((p) => p.y), mn = Math.min(...ys), mx = Math.max(...ys), sp = mx - mn || 1;
+  const X = (i) => 20 + i * (W - 30) / (pts.length - 1), Y = (v) => H - 8 - (v - mn) / sp * (H - 30);
+  const d = pts.map((p, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p.y).toFixed(1)).join(" ");
+  const avg = ys.reduce((a, b) => a + b, 0) / ys.length;
+  return `<svg viewBox="0 0 ${W} ${H + 16}" width="100%"><line x1="20" x2="${W - 10}" y1="${Y(avg)}" y2="${Y(avg)}" stroke="var(--mut)" stroke-dasharray="3 4" opacity=".6"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="3.5" fill="${color}"/>`).join("")}<text x="0" y="${Y(mx) + 3}">${fmt(mx)}</text><text x="0" y="${Y(mn) + 3}">${fmt(mn)}</text><text x="${W - 10}" y="${H + 12}" text-anchor="end">среднее ${fmt(avg)}</text></svg>`;
+}
+function stats_() {
+  return "";
+}
+function tripBase(st, all) {
+  const l = st.l100 != null ? st.l100 : all.l100, p = st.ppl != null ? st.ppl : all.ppl;
+  return { l, p };
+}
+function tripCalc() {
+  const inp = $("#tripKm");
+  if (!inp) return;
+  const car = curCar(), b = tripBase(stats(car, statPeriod()), stats(car, 0));
+  const k = parseFloat(String(inp.value).replace(",", ".")) || 0;
+  ui.tripKm = inp.value;
+  const o = $("#tripOut");
+  if (!o) return;
+  if (b.l == null || b.p == null) {
+    o.innerHTML = '<span class="mut sm">Нужны две полные заправки с пробегом и ценой</span>';
+    return;
+  }
+  const lit = k * b.l / 100;
+  o.innerHTML = `<div class="kv"><span>Топлива потребуется</span><b>${nf1.format(lit)} л</b></div><div class="kv"><span>Стоимость поездки</span><b>${money(lit * b.p)}</b></div>`;
+}
+function tripCard(car, st, all) {
+  const b = tripBase(st, all);
+  const per100 = b.l != null && b.p != null ? b.l * b.p : null;
+  const km0 = ui.tripKm != null ? ui.tripKm : "500";
+  return `<h3>Бензин и поездка</h3><div class="card"><div class="kv"><span>Бензин на 100 км</span><b>${per100 != null ? money(per100) : "—"}</b></div>
+ <div class="kv"><span>Бензин на 1 км</span><b>${per100 != null ? nf2.format(per100 / 100) + " " + cur() : "—"}</b></div>
+ <div class="f" style="margin-top:10px"><label>Сколько км проехать?</label><input id="tripKm" type="text" inputmode="decimal" value="${esc(String(km0))}"></div>
+ <div id="tripOut" style="margin-top:6px"></div>
+ <div class="sm mut" style="margin-top:8px">${b.l != null && b.p != null ? "Считаю по среднему расходу " + nf1.format(b.l) + " л/100 км и средней цене " + nf1.format(b.p) + " " + cur() + "/л за выбранный период." : ""}</div></div>
+`;
+}
+function statsView() {
+  const car = curCar(), pr0 = statPeriod(), st = stats(car, pr0), all = stats(car, 0), segs = fuelSegs(car.id);
+  const cats = Object.entries(st.byCat).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  const pr = S.records.filter((r) => r.carId === car.id && r.type === "fuel" && r.liters > 0 && r.cost > 0).sort((a, b) => a.date.localeCompare(b.date)).slice(-20).map((r) => ({ y: r.cost / r.liters }));
+  const showFrom = ui.period === "all" ? "" : pr0.from, showTo = ui.period === "all" ? "" : pr0.to;
+  return `<div class="chips">${[["month", "Месяц"], ["year", "Год"], ["all", "Всё время"], ["range", "📅 Период"]].map((p) => `<button class="chip ${ui.period === p[0] ? "on" : ""}" data-a="period" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ <div class="two" style="margin-bottom:12px"><div class="f" style="margin:0"><label>С</label><input type="date" id="stFrom" value="${showFrom}"></div><div class="f" style="margin:0"><label>По</label><input type="date" id="stTo" value="${showTo}"></div></div>
+ <div class="tiles"><div class="tile"><div class="l">Всего потрачено</div><div class="v">${money(st.total)}</div></div><div class="tile"><div class="l">Без топлива</div><div class="v">${money(st.total - st.fuelCost)}</div></div>
+ <div class="tile"><div class="l">Пробег за период</div><div class="v">${st.dist != null ? nf0.format(st.dist) : "—"}</div><div class="s">км по записям</div></div><div class="tile"><div class="l">Стоимость 1 км</div><div class="v">${st.perKm != null ? nf1.format(st.perKm) + " " + cur() : "—"}</div></div>
+ <div class="tile"><div class="l">Средний расход</div><div class="v">${st.l100 != null ? nf1.format(st.l100) : "—"}</div><div class="s">л / 100 км</div></div><div class="tile"><div class="l">Цена литра (ср.)</div><div class="v">${st.ppl != null ? nf1.format(st.ppl) : "—"}</div><div class="s">${cur()} / л</div></div></div>
+ ${tripCard(car, st, all)}
+ <h3>Расходы по месяцам</h3><div class="card">${chartMonths(car)}<div class="legend">${Object.entries(CATS).map(([k, c]) => `<span><i style="background:${c.c}"></i>${c.n}</span>`).join("")}</div></div>
+ <h3>На что уходят деньги</h3><div class="card">${cats.length ? cats.map(([k, v]) => `<div class="hbar"><div class="top"><span>${CATS[k].i} ${CATS[k].n}</span><b>${money(v)} <span class="mut sm">${Math.round(v / st.total * 100)}%</span></b></div><div class="b"><div style="width:${v / cats[0][1] * 100}%;background:${CATS[k].c}"></div></div></div>`).join("") : '<div class="empty" style="padding:12px">Нет данных за период</div>'}</div>
+ <h3>Расход топлива, л/100 км</h3><div class="card">${chartLine(segs.slice(-20).map((s) => ({ y: s.l100 })), (v) => nf1.format(v), "#ffb02e")}</div>
+ <h3>Цена литра, ${cur()}</h3><div class="card">${chartLine(pr, (v) => nf1.format(v), "#4f8cff")}</div>
+ <div class="card"><div class="kv"><span>Записей всего</span><span>${all.rs.length}</span></div><div class="kv"><span>Потрачено за всё время</span><span>${money(all.total)}</span></div></div>`;
+}
+window.stats_view = statsView;
+/* ===== Рейсы: отдельная вкладка, данные хранятся отдельно от записей дневника ===== */
+const TRIP_KEY = "cd2_trip";
+let tripWatch = null, tripTimer = null, wakeLock = null;
+const tripGet = () => {
+  try {
+    return JSON.parse(localStorage.getItem(TRIP_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+};
+const tripPut = (t) => {
+  try {
+    if (t) localStorage.setItem(TRIP_KEY, JSON.stringify(t));
+    else localStorage.removeItem(TRIP_KEY);
+  } catch (e) {
+  }
+};
+const havM = (a, b, c, d) => {
+  const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
+  const h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) * Math.sin(y / 2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+const r1 = (x) => Math.round(x * 10) / 10;
+const r2 = (x) => Math.round(x * 100) / 100;
+function tripDefaults(car) {
+  const lf = S.records.filter((x) => x.carId === car.id && x.type === "fuel" && x.liters > 0 && x.cost > 0).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0))[0];
+  const st = stats(car, 0);
+  return {
+    price: lf ? r2(lf.cost / lf.liters) : S.settings.tripPrice || null,
+    l100: st.l100 != null ? r1(st.l100) : S.settings.tripL100 || null,
+    priceFromDiary: !!lf,
+    l100FromDiary: st.l100 != null
+  };
+}
+function tripMath(km2, rev, price, l100, durMs) {
+  const liters = l100 != null && km2 != null ? km2 * l100 / 100 : null;
+  const fuel = liters != null && price != null ? liters * price : null;
+  const profit = rev != null ? rev - (fuel || 0) : null;
+  return { liters, fuel, profit, perKm: profit != null && km2 > 0 ? profit / km2 : null, perHour: profit != null && durMs > 6e4 ? profit / (durMs / 36e5) : null };
+}
+const hms = (ms) => {
+  const s = Math.max(0, Math.floor(ms / 1e3));
+  return pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s % 3600 / 60)) + ":" + pad(s % 60);
+};
+const durTxt = (ms) => {
+  const m = Math.round(ms / 6e4);
+  return m < 1 ? "—" : m < 60 ? m + " мин" : Math.floor(m / 60) + " ч " + pad(m % 60) + " мин";
+};
+function tripKeepAwake() {
+  try {
+    if (navigator.wakeLock && !wakeLock) {
+      navigator.wakeLock.request("screen").then((l) => {
+        wakeLock = l;
+        l.addEventListener("release", () => {
+          wakeLock = null;
+        });
+      }).catch(() => {
+      });
+    }
+  } catch (e) {
+  }
+}
+function tripHalt() {
+  try {
+    if (tripWatch != null) navigator.geolocation.clearWatch(tripWatch);
+  } catch (e) {
+  }
+  tripWatch = null;
+  clearInterval(tripTimer);
+  tripTimer = null;
+  try {
+    wakeLock && wakeLock.release();
+  } catch (e) {
+  }
+  wakeLock = null;
+}
+function tripFix(pos) {
+  const t = tripGet();
+  if (!t || t.state !== "run") return;
+  const c = pos.coords, ts = pos.timestamp || Date.now();
+  t.gpsErr = null;
+  t.acc = c.accuracy;
+  t.fixT = Date.now();
+  if (c.accuracy <= 50) {
+    if (!t.last) {
+      t.last = { lat: c.latitude, lon: c.longitude, t: ts };
+    } else {
+      const d = havM(t.last.lat, t.last.lon, c.latitude, c.longitude), dt = (ts - t.last.t) / 1e3;
+      if (dt > 0) {
+        const v = d / dt, thr = Math.max(8, c.accuracy * 0.5);
+        const glitch = v > 70 && dt < 30;
+        if (!glitch && (d >= thr || c.speed != null && c.speed > 2 && d >= 4)) {
+          t.km += d / 1e3;
+          t.last = { lat: c.latitude, lon: c.longitude, t: ts };
+        }
+      }
+    }
+  }
+  tripPut(t);
+  tripUI();
+}
+function tripErr(e) {
+  const t = tripGet();
+  if (!t || t.state !== "run") return;
+  t.gpsErr = e && e.code === 1 ? "Нет доступа к геолокации. Разрешите её в настройках Safari" : "GPS недоступен";
+  tripPut(t);
+  tripUI();
+}
+function tripTrack() {
+  const t = tripGet();
+  if (!t || t.state !== "run" || tripWatch != null) return;
+  if (navigator.geolocation) {
+    tripWatch = navigator.geolocation.watchPosition(tripFix, tripErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 3e4 });
+  } else {
+    t.gpsErr = "Геолокация недоступна в этом браузере";
+    tripPut(t);
+  }
+  tripKeepAwake();
+  clearInterval(tripTimer);
+  tripTimer = setInterval(tripUI, 1e3);
+}
+function tripUI() {
+  const t = tripGet();
+  if (!t) return;
+  const e = (id) => document.getElementById(id);
+  const now = t.state === "run" ? Date.now() : t.end || Date.now();
+  if (e("tpTime")) e("tpTime").textContent = hms(now - t.start);
+  if (e("tpKm")) e("tpKm").textContent = nf1.format(t.km);
+  if (e("tpGps")) {
+    const age = t.fixT ? Math.round((Date.now() - t.fixT) / 1e3) : null;
+    e("tpGps").textContent = t.state !== "run" ? "Слежение остановлено" : t.gpsErr ? t.gpsErr : t.fixT ? "GPS: точность ±" + Math.round(t.acc) + " м" + (age > 20 ? " · сигнала нет " + age + " с" : "") : "Ищу спутники…";
+    e("tpGps").style.color = t.gpsErr ? "var(--bad)" : "";
+  }
+  if (e("tpFuel")) {
+    const m = tripMath(t.km, null, t.price, t.l100, 0);
+    e("tpFuel").textContent = m.fuel != null ? nf1.format(m.liters) + " л ≈ " + money(m.fuel) : "укажите цену и расход";
+  }
+}
+function tripSheet(o) {
+  const t = o.t, car = curCar();
+  const num = (v) => v != null && v !== "" ? String(r2(v)) : "";
+  const body = `<form id="tf">
+ ${fld("Сумма за рейс, " + cur(), `<input name="rev" inputmode="decimal" value="${num(t.revenue)}" placeholder="сколько заплатили" style="font-size:22px;font-weight:700">`)}
+ <div class="two">${fld("Километры", `<input name="km" inputmode="decimal" value="${num(t.km)}">`)}${o.date ? fld("Дата", `<input type="date" name="date" value="${t.date}">`) : fld("В пути", `<div class="mut" style="padding:12px 0">${durTxt(t.durMs)}</div>`)}</div>
+ <div class="two">${fld("Бензин, " + cur() + "/л", `<input name="price" inputmode="decimal" value="${num(t.price)}">`)}${fld("Расход, л/100 км", `<input name="l100" inputmode="decimal" value="${num(t.l100)}">`)}</div>
+ ${fld("Заметка (клиент, маршрут)", `<input name="note" value="${esc(t.note || "")}">`)}
+ <div id="tfRes" class="card" style="margin:0 0 12px"></div>
+ <button class="btn full" type="submit">Сохранить рейс</button>
+ ${o.onDelete ? '<button type="button" class="btn red full" id="tfDel" style="margin-top:8px">🗑️ ' + (o.delText || "Удалить рейс") + "</button>" : ""}</form>`;
+  const ov = sheet(o.title, body), F = $("#tf", ov), E = F.elements;
+  const calc = () => {
+    const kmv = pn(E.km.value), rev = pn(E.rev.value), m = tripMath(kmv || 0, rev != null ? rev : 0, pn(E.price.value), pn(E.l100.value), t.durMs || 0);
+    const col = m.profit == null ? "" : m.profit >= 0 ? "var(--ok)" : "var(--bad)";
+    $("#tfRes", ov).innerHTML = `<div class="kv"><span>Бензин на рейс</span><span>${m.fuel != null ? nf1.format(m.liters) + " л ≈ " + money(m.fuel) : "укажите цену и расход"}</span></div>
+ <div class="kv"><span><b style="color:var(--txt)">Прибыль</b></span><span style="color:${col};font-size:20px;font-weight:800">${m.profit != null ? money(m.profit) : "—"}</span></div>
+ <div class="kv"><span>Прибыль на 1 км</span><span>${m.perKm != null ? nf1.format(m.perKm) + " " + cur() : "—"}</span></div>
+ ${m.perHour != null ? `<div class="kv"><span>Прибыль в час</span><span>${money(m.perHour)}</span></div>` : ""}`;
+  };
+  F.oninput = calc;
+  calc();
+  F.onsubmit = (e) => {
+    e.preventDefault();
+    const kmv = pn(E.km.value) || 0, rev = pn(E.rev.value) || 0, price = pn(E.price.value), l100 = pn(E.l100.value), m = tripMath(kmv, rev, price, l100, t.durMs || 0);
+    if (price != null && !S.settings.tripPrice) S.settings.tripPrice = price;
+    if (l100 != null && !S.settings.tripL100) S.settings.tripL100 = l100;
+    o.onSave({ km: r1(kmv), revenue: rev, price, l100, liters: m.liters != null ? r2(m.liters) : null, fuel: m.fuel != null ? r2(m.fuel) : null, profit: r2(m.profit), note: E.note.value.trim(), date: o.date ? E.date.value || t.date : t.date });
+  };
+  if (o.onDelete) $("#tfDel", ov).onclick = o.onDelete;
+  if (!o.noFocus) setTimeout(() => {
+    try {
+      E.rev.focus();
+    } catch (e) {
+    }
+  }, 350);
+}
+function tripFinish() {
+  const t = tripGet(), car = curCar();
+  if (!t) return;
+  const dur = (t.end || Date.now()) - t.start;
+  tripSheet({
+    title: "Рейс завершён",
+    t: { km: r1(t.km), revenue: "", price: t.price, l100: t.l100, note: "", date: iso(new Date(t.start)), durMs: dur },
+    delText: "Отменить рейс (не сохранять)",
+    onDelete: () => {
+      if (!confirm("Не сохранять этот рейс?")) return;
+      tripHalt();
+      tripPut(null);
+      closeSheet();
+      render();
+    },
+    onSave: (v) => {
+      tripHalt();
+      S.trips.unshift(Object.assign({ id: t.id, carId: t.carId, start: t.start, end: t.end || Date.now(), durMs: dur }, v));
+      tripPut(null);
+      save();
+      closeSheet();
+      render();
+      toast("🚕 Рейс сохранён · прибыль " + money(v.profit));
+    }
+  });
+}
+function tripEdit(id) {
+  const x = S.trips.find((r) => r.id === id);
+  if (!x) return;
+  tripSheet({
+    title: "Рейс " + fmtDate(x.date),
+    t: x,
+    date: true,
+    noFocus: true,
+    onDelete: () => {
+      if (!confirm("Удалить этот рейс?")) return;
+      S.trips = S.trips.filter((r) => r.id !== id);
+      save();
+      closeSheet();
+      render();
+    },
+    onSave: (v) => {
+      Object.assign(x, v);
+      save();
+      closeSheet();
+      render();
+      toast("Сохранено");
+    }
+  });
+}
+function tripAddManual() {
+  const car = curCar(), d = tripDefaults(car);
+  tripSheet({
+    title: "Рейс вручную",
+    t: { km: "", revenue: "", price: d.price, l100: d.l100, note: "", date: today(), durMs: 0 },
+    date: true,
+    onSave: (v) => {
+      S.trips.unshift(Object.assign({ id: uid(), carId: car.id, start: (/* @__PURE__ */ new Date(v.date + "T12:00:00")).getTime(), end: (/* @__PURE__ */ new Date(v.date + "T12:00:00")).getTime(), durMs: 0, manual: true }, v));
+      S.trips.sort((a, b) => b.start - a.start);
+      save();
+      closeSheet();
+      render();
+      toast("🚕 Рейс добавлен");
+    }
+  });
+}
+function tripsView() {
+  const car = curCar();
+  if (!car) return '<div class="card empty"><b>🚕</b>Сначала добавьте автомобиль во вкладке «Ещё».</div>';
+  const t = tripGet(), d = tripDefaults(car);
+  let top = "";
+  if (t && t.state === "run") {
+    top = `<div class="card" style="text-align:center"><span class="pill ok">● Рейс идёт</span>
+ <div id="tpTime" style="font-size:38px;font-weight:800;margin:8px 0 0;font-variant-numeric:tabular-nums">00:00:00</div>
+ <div style="font-size:56px;font-weight:800;line-height:1.1;margin-top:6px"><span id="tpKm">0</span><span style="font-size:22px"> км</span></div>
+ <div class="sm mut" id="tpGps" style="margin-top:4px">Ищу спутники…</div></div>
+ <div class="card"><div class="two"><div class="f"><label>Бензин, ${cur()}/л</label><input id="tpPrice" inputmode="decimal" value="${t.price != null ? t.price : ""}"></div><div class="f"><label>Расход, л/100 км</label><input id="tpL100" inputmode="decimal" value="${t.l100 != null ? t.l100 : ""}"></div></div>
+ <div class="kv"><span>Бензин на рейс (оценка)</span><span id="tpFuel">—</span></div></div>
+ <button class="btn red full" style="padding:17px;font-size:19px;margin-bottom:8px" data-a="tripStop">⏹ Стоп</button>
+ <div class="sm mut" style="margin-bottom:14px">Держите экран включён и приложение открытым: когда iPhone блокируется, GPS перестаёт записывать путь. Километры можно поправить при завершении.</div>`;
+  } else if (t && t.state === "stopped") {
+    top = `<div class="card" style="text-align:center"><span class="pill soon">Рейс остановлен</span>
+ <div style="font-size:30px;font-weight:800;margin:8px 0">${nf1.format(t.km)} км · <span id="tpTime">${hms((t.end || Date.now()) - t.start)}</span></div>
+ <div class="sm mut">Осталось ввести сумму за рейс</div></div>
+ <div class="two" style="margin-bottom:14px"><button class="btn" data-a="tripFinish">✅ Завершить</button><button class="btn red" data-a="tripCancel">Отменить</button></div>`;
+  } else {
+    const need = [];
+    if (d.price == null) need.push(`<div class="f"><label>Цена бензина, ${cur()}/л</label><input id="tpPrice0" inputmode="decimal" placeholder="например 62"></div>`);
+    if (d.l100 == null) need.push(`<div class="f"><label>Расход, л/100 км</label><input id="tpL1000" inputmode="decimal" placeholder="например 10,5"></div>`);
+    top = `<div class="card"><button class="btn full" style="padding:20px;font-size:21px" data-a="tripStart">▶ Старт рейса</button>
+ <div class="sm mut" style="margin-top:10px">Бензин: <b style="color:var(--txt)">${d.price != null ? nf2.format(d.price) + " " + cur() + "/л" : "не задан"}</b>${d.priceFromDiary ? " (последняя заправка)" : ""}<br>Расход: <b style="color:var(--txt)">${d.l100 != null ? nf1.format(d.l100) + " л/100 км" : "не задан"}</b>${d.l100FromDiary ? " (средний по дневнику)" : ""}</div>
+ ${need.length ? '<div class="two" style="margin-top:10px">' + need.join("") + "</div>" : ""}
+ <div class="sm mut" style="margin-top:8px">Километры считаются по GPS от места старта. Маршрут не нужен.</div></div>`;
+  }
+  const P = ui.tripP || "month", td = today(), ms = td.slice(0, 8) + "01";
+  const from = P === "day" ? td : P === "month" ? ms : ui.tripFrom || ms, to = P === "range" ? ui.tripTo || td : td;
+  const all = S.trips.filter((x) => x.carId === car.id), list = all.filter((x) => x.date >= from && x.date <= to);
+  const sum = (f) => list.reduce((s, x) => s + (f(x) || 0), 0);
+  const kmS = sum((x) => x.km), rev = sum((x) => x.revenue), fuel = sum((x) => x.fuel), prof = sum((x) => x.profit);
+  const timed = list.filter((x) => x.durMs > 6e4), hrs = timed.reduce((s, x) => s + x.durMs / 36e5, 0), profT = timed.reduce((s, x) => s + (x.profit || 0), 0);
+  const col = prof >= 0 ? "var(--ok)" : "var(--bad)";
+  const tiles = list.length ? `<div class="tiles"><div class="tile"><div class="l">Рейсов</div><div class="v">${list.length}</div><div class="s">${nf1.format(kmS)} км</div></div><div class="tile"><div class="l">Выручка</div><div class="v">${money(rev)}</div></div>
+ <div class="tile"><div class="l">Бензин</div><div class="v">${money(fuel)}</div></div><div class="tile"><div class="l">Прибыль</div><div class="v" style="color:${col}">${money(prof)}</div></div>
+ <div class="tile"><div class="l">Прибыль на 1 км</div><div class="v">${kmS > 0 ? nf1.format(prof / kmS) + " " + cur() : "—"}</div></div><div class="tile"><div class="l">Прибыль в час</div><div class="v">${hrs > 0 ? money(profT / hrs) : "—"}</div></div></div>` : "";
+  const rows = list.slice(0, 60).map((x) => {
+    const tm = x.manual ? "" : " " + pad(new Date(x.start).getHours()) + ":" + pad(new Date(x.start).getMinutes());
+    return `<button class="rec" data-a="tripOpen" data-id="${x.id}"><div class="ic" style="background:var(--card2)">🚕</div><div class="m"><div class="t">${fmtDate(x.date)}${tm} · ${nf1.format(x.km)} км</div><div class="s">${esc(x.note || "")}${x.note ? " · " : ""}бензин ${money(x.fuel)} · ${money(x.revenue)}</div></div><div class="c" style="color:${x.profit >= 0 ? "var(--ok)" : "var(--bad)"}">${money(x.profit)}</div></button>`;
+  }).join("");
+  return `<h3>Рейсы · ${esc(car.name)}</h3>${top}
+ <div class="chips">${[["day", "Сегодня"], ["month", "За месяц"], ["range", "📅 Период"]].map((p) => `<button class="chip ${P === p[0] ? "on" : ""}" data-a="tripP" data-p="${p[0]}">${p[1]}</button>`).join("")}</div>
+ <div class="two" style="margin-bottom:12px"><div class="f" style="margin:0"><label>С</label><input type="date" id="tpFrom" value="${from}"></div><div class="f" style="margin:0"><label>По</label><input type="date" id="tpTo" value="${to}"></div></div>
+ ${tiles}
+ ${list.length ? `<button class="card flex between" style="width:100%;text-align:left" data-a="tripToggle"><b>📋 История рейсов (${list.length})</b><span class="mut" style="font-size:18px">${ui.tripOpen ? "▴" : "▾"}</span></button>${ui.tripOpen ? `<div class="card" style="padding:4px 14px">${rows}</div>` : ""}` : `<div class="card empty" style="padding:20px">За этот период рейсов нет.</div>`}
+ <button class="btn sec full" data-a="tripAdd">＋ Добавить рейс вручную</button>
+ <p class="mut sm" style="text-align:center">Рейсы хранятся отдельно и не попадают в записи дневника.</p>`;
+}
+
+function more() {
+  const est = S.cars.length ? "" : "";
+  return `<h3>Гараж <button data-a="carAdd">+ Авто</button></h3>
+ ${S.cars.length ? S.cars.map((c) => `<div class="card flex"><div class="ic" style="background:var(--card2)">${c.photo ? `<img class="thumb" style="width:42px;height:42px" src="${c.photo}">` : "🚗"}</div><div class="grow"><b>${esc(c.name)}</b>${c.id === curCar().id ? ' <span class="pill ok">выбрано</span>' : ""}<div class="mut sm">${esc([c.make, c.year, c.plate].filter(Boolean).join(" · "))} · ${km(c.odo)}</div></div><button class="btn sec" data-a="carEdit" data-id="${c.id}">✏️</button></div>`).join("") : '<div class="card empty">Пока нет автомобилей</div>'}
+ <h3>Данные и резервные копии</h3>
+ <div class="card"><p class="sm mut" style="margin-top:0">Все данные хранятся в памяти этого телефона (в браузере). Если очистить данные Safari/удалить значок — они пропадут, поэтому периодически делайте экспорт. Последняя копия: <b>${S.settings.lastBackup ? fmtDate(S.settings.lastBackup) : "не делалась"}</b></p>
+ <div style="display:grid;gap:8px"><button class="btn" data-a="exp">💾 Скачать файл-копию (.json)</button><button class="btn sec" data-a="share">📤 Отправить / сохранить в «Файлы»</button>
+ <button class="btn sec" data-a="ftImport">⛽ Перенести из FuelTracker</button>
+ <label class="btn sec">📥 Загрузить из файла<input type="file" accept=".json,application/json" hidden data-imp></label>
+ ${curCar() ? `<button class="btn sec" data-a="csv">📊 Выгрузить историю в CSV (Excel)</button><button class="btn sec" data-a="print">🖨️ Отчёт по авто / PDF</button>` : ""}</div><div class="sm mut" id="usage" style="margin-top:10px"></div></div>
+ <h3>Сигналы напоминаний</h3>
+ <div class="card"><label class="sw"><input type="checkbox" id="alPop" ${S.settings.alertPopup !== false ? "checked" : ""}> Окно «Пора обратить внимание» при первом открытии за день</label>
+ <div class="sm mut" style="margin:6px 0 10px">Красная цифра на вкладке «Сервис» показывается всегда.</div>
+ ${window.Notification && navigator.setAppBadge ? `<button class="btn sec full" data-a="badgeOn" style="margin-bottom:8px">🔴 Значок на иконке приложения${Notification.permission === "granted" ? " · включён" : ""}</button>` : ""}
+ <button class="btn sec full" data-a="icsExport">📅 Добавить сроки в Календарь iPhone</button>
+ <div class="sm mut" style="margin-top:8px">Календарь пришлёт настоящие уведомления: за неделю, за день и в день срока (в 9:00). После замены расходника выгрузите заново, и события обновятся.</div></div>
+ <h3>Настройки</h3>
+ <div class="card"><div class="two"><div class="f"><label>Валюта</label><input id="cu" value="${esc(S.settings.currency)}" maxlength="4"></div><div class="f"><label>Тема</label><select id="th">${[["auto", "Авто"], ["dark", "Тёмная"], ["light", "Светлая"]].map((t) => `<option value="${t[0]}" ${S.settings.theme === t[0] ? "selected" : ""}>${t[1]}</option>`).join("")}</select></div></div></div>
+ <div class="card sm mut"><b style="color:var(--txt)">📲 На экран «Домой» (iPhone):</b> откройте страницу в Safari → «Поделиться» → «На экран „Домой“». Дальше приложение открывается как обычное.</div>
+ <div class="card"><button class="btn red full" data-a="wipe">🗑️ Удалить все данные</button></div>
+ <p class="mut sm" style="text-align:center">Дневник авто 2 · данные хранятся только у вас</p>`;
+}
+function closeSheet() {
+  $$(".ov").forEach((e) => e.remove());
+  document.body.style.overflow = "";
+}
+function sheet(title, body) {
+  closeSheet();
+  const o = document.createElement("div");
+  o.className = "ov";
+  o.innerHTML = `<div class="sh"><div class="shh"><b>${title}</b><button class="x" data-a="close">✕</button></div><div class="shb">${body}</div></div>`;
+  o.addEventListener("click", (e) => {
+    if (e.target === o) closeSheet();
+  });
+  document.body.appendChild(o);
+  document.body.style.overflow = "hidden";
+  return o;
+}
+const fld = (l, h, c = "") => `<div class="f ${c}"><label>${l}</label>${h}</div>`;
+function readImg(file, max = 1e3, q = 0.72) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas");
+        c.width = im.width * k;
+        c.height = im.height * k;
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        res(c.toDataURL("image/jpeg", q));
+      };
+      im.onerror = rej;
+      im.src = fr.result;
+    };
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+}
+function photoField(o, get, set, label) {
+  const box = $("[data-ph]", o);
+  const draw = () => {
+    const v = get();
+    box.innerHTML = (v ? `<img class="thumb" src="${v}"> <button type="button" class="btn red" data-rm>Убрать</button>` : "") + `<label class="btn sec">📷 ${label}<input type="file" accept="image/*" hidden></label>`;
+    $("input", box).onchange = async (e) => {
+      const f = e.target.files[0];
+      if (f) {
+        try {
+          set(await readImg(f, label === "Фото авто" ? 600 : 1e3));
+          draw();
+        } catch (x) {
+          toast("Не удалось загрузить фото");
+        }
+      }
+    };
+    const rm = $("[data-rm]", box);
+    if (rm) rm.onclick = () => {
+      set(null);
+      draw();
+    };
+  };
+  draw();
+}
+function allItems(type) {
+  const set = /* @__PURE__ */ new Map();
+  const add = (s) => {
+    if (s && !set.has(norm(s))) set.set(norm(s), s);
+  };
+  (PRESETS[type] || []).forEach(add);
+  const car = curCar();
+  S.reminders.filter((r) => r.carId === car.id).forEach((r) => {
+    if (type === "service" || type === "tires" && /шин|баланс|развал/i.test(r.title)) add(r.title);
+  });
+  S.records.filter((r) => r.carId === car.id && r.type === type).forEach((r) => (r.items || []).forEach(add));
+  return [...set.values()];
+}
+/* ===== Голосовой ввод заправки: разбор свободной русской фразы ===== */
+var VW_U = { ноль: 0, нуль: 0, один: 1, одна: 1, одну: 1, одного: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9, десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15, шестнадцать: 16, семнадцать: 17, восемнадцать: 18, девятнадцать: 19 };
+var VW_T = { двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50, шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90 };
+var VW_H = { сто: 100, двести: 200, триста: 300, четыреста: 400, пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900 };
+var VW_BRANDS = [["лукойл", "Лукойл"], ["роснефт", "Роснефть"], ["газпромнефт", "Газпромнефть"], ["газпром", "Газпром"], ["шелл", "Shell"], ["shell", "Shell"], ["тейбол", "Teboil"], ["teboil", "Teboil"], ["татнефт", "Татнефть"], ["нефтьмагистраль", "Нефтьмагистраль"], ["тнк", "ТНК"], ["бипи", "BP"], ["несте", "Neste"], ["нефтика", "Нефтика"], ["лидер", "Лидер"], ["петроль", "Петроль"], ["трасса", "Трасса"]];
+function vwTok(text) {
+  var s = String(text || "").toLowerCase().replace(/ё/g, "е").replace(/₽/g, " руб ").replace(/(\d)[,.](\d)/g, "$1.$2").replace(/(\d)\s+(\d{3})(?!\d)/g, "$1$2").replace(/(\d)\s+(\d{3})(?!\d)/g, "$1$2");
+  return s.split(/[^0-9a-zа-я.]+/).map(function(t) {
+    return t.replace(/^\.+|\.+$/g, "");
+  }).filter(Boolean);
+}
+function vwWordNum(tk, i) {
+  var n = tk.length, j = i, tot = 0, cur = 0, st = 0, any = false, th = false;
+  while (j < n) {
+    var w = tk[j];
+    if (w in VW_H && st === 0) {
+      cur += VW_H[w];
+      st = 1;
+    } else if (w in VW_T && st <= 1) {
+      cur += VW_T[w];
+      st = 2;
+    } else if (w in VW_U && (st === 0 || st === 1 || st === 2 && VW_U[w] < 10)) {
+      if (VW_U[w] >= 10 && st === 2) break;
+      cur += VW_U[w];
+      st = 3;
+    } else if (/^тысяч/.test(w) && !th && (cur > 0 || !any)) {
+      tot += (cur || 1) * 1e3;
+      cur = 0;
+      st = 0;
+      th = true;
+    } else break;
+    any = true;
+    j++;
+  }
+  return any ? { v: tot + cur, end: j - 1 } : null;
+}
+function vwNums(tk) {
+  var out = [], i = 0, n = tk.length;
+  while (i < n) {
+    var t = tk[i];
+    if (/^\d+(\.\d+)?$/.test(t)) {
+      out.push({ v: parseFloat(t), a: i, b: i });
+      i++;
+      continue;
+    }
+    if (t === "полтора" || t === "полторы") {
+      out.push({ v: 1.5, a: i, b: i });
+      i++;
+      continue;
+    }
+    var w = vwWordNum(tk, i);
+    if (!w) {
+      i++;
+      continue;
+    }
+    var v = w.v, b = w.end, nx = tk[b + 1];
+    if (nx && /^(целых|целая|целое|запятая|точка)$/.test(nx)) {
+      var s2 = /^\d+$/.test(tk[b + 2] || "") ? { v: parseFloat(tk[b + 2]), end: b + 2 } : vwWordNum(tk, b + 2);
+      if (s2) {
+        var den = String(Math.floor(s2.v)).length, un = tk[s2.end + 1], e2 = s2.end;
+        if (un && /^десят/.test(un)) {
+          den = 1;
+          e2++;
+        } else if (un && /^сот/.test(un)) {
+          den = 2;
+          e2++;
+        }
+        v += s2.v / Math.pow(10, den);
+        b = e2;
+      }
+    } else if (nx === "с" && /^половин/.test(tk[b + 2] || "")) {
+      v += 0.5;
+      b += 2;
+    }
+    out.push({ v: v, a: i, b: b });
+    i = b + 1;
+  }
+  return out;
+}
+function parseFuelSpeech(text, ctx) {
+  ctx = ctx || {};
+  var tk = vwTok(text), nums = vwNums(tk), res = { liters: null, price: null, sum: null, odo: null, full: null, place: null };
+  var raw = tk.join(" ");
+  var ODO = /^(пробег[а-я]*|одометр[а-я]*|спидометр[а-я]*|счетчик[а-я]*|показывает|показания|километраж[а-я]*)$/;
+  var has = function(arr, re) {
+    return arr.some(function(x) {
+      return re.test(x);
+    });
+  };
+  for (var q = 0; q < nums.length - 1; q++) {
+    var A1 = nums[q], B1 = nums[q + 1];
+    if (B1.a === A1.b + 1 && A1.v >= 1 && A1.v < 1e3 && B1.v >= 1 && B1.v < 1e3 && Math.floor(A1.v) === A1.v && Math.floor(B1.v) === B1.v) {
+      var pr = tk.slice(Math.max(0, A1.a - 3), A1.a), pt = tk[B1.b + 1] || "";
+      if (has(pr, ODO) || /^(км|километр)/.test(pt)) {
+        nums.splice(q, 2, { v: A1.v * 1e3 + B1.v, a: A1.a, b: B1.b });
+      }
+    }
+  }
+  var used = [], money = null;
+  nums.forEach(function(n, idx) {
+    var p1 = tk[n.a - 1] || "", p3 = tk.slice(Math.max(0, n.a - 3), n.a), a3 = tk.slice(n.b + 1, n.b + 4), unit = a3[0] || "";
+    if (/^(л|лит|литр[а-я]*)$/.test(unit) && !(has(p3, ODO) && n.v >= 1e3)) {
+      if (res.liters == null) res.liters = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^коп/.test(unit)) {
+      if (money && res[money] != null) res[money] = Math.round((res[money] + n.v / 100) * 100) / 100;
+      used[idx] = 1;
+      return;
+    }
+    if (unit === "за" && /^литр/.test(a3[1] || "")) {
+      if (res.price == null) res.price = n.v;
+      money = "price";
+      used[idx] = 1;
+      return;
+    }
+    if (/^(руб|рубл[а-я]*|р)$/.test(unit)) {
+      var a6 = tk.slice(n.b + 1, n.b + 7), zi = a6.indexOf("за"), perL = zi >= 0 && /^литр/.test(a6[zi + 1] || "") || has(p3, /^(по|цена|цену|ценой|стоимость|стоимостью)$/);
+      var key = perL || n.v < 150 ? "price" : "sum";
+      if (res[key] == null) res[key] = n.v;
+      money = key;
+      used[idx] = 1;
+      return;
+    }
+    if (/^(км|километр[а-я]*|кило[а-я]*)$/.test(unit) || has(p3, ODO)) {
+      if (res.odo == null) res.odo = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^литр[а-я]*$/.test(p1) && res.liters == null && n.v < 1e3) {
+      res.liters = n.v;
+      used[idx] = 1;
+      return;
+    }
+    if (/^(по|цена|цену|ценой|стоимость|стоимостью|литр|литра)$/.test(p1) || p1 === "за" && /^литр/.test(tk[n.a - 2] || "")) {
+      if (res.price == null) res.price = n.v;
+      money = "price";
+      used[idx] = 1;
+      return;
+    }
+    if (has(p3, /^(сумма|сумму|суммой|итого|всего|заплатил[а-я]*|оплатил[а-я]*|отдал[а-я]*|чек|чека|выбило|вышло|вышла|получилось|списали|списалось)$/) || p1 === "на" && n.v > 99 && !/^(км|килом)/.test(unit)) {
+      if (res.sum == null) res.sum = n.v;
+      money = "sum";
+      used[idx] = 1;
+    }
+  });
+  var carOdo = ctx.odo || 0, small = [];
+  nums.forEach(function(n, idx) {
+    if (used[idx]) return;
+    if (res.odo == null && (n.v >= 2e4 || carOdo && n.v >= 5e3 && n.v >= carOdo * 0.8 && n.v <= carOdo + 4e4)) {
+      res.odo = n.v;
+    } else if (res.sum == null && n.v >= 150 && n.v <= 3e4) {
+      res.sum = n.v;
+      money = "sum";
+    } else if (n.v > 0 && n.v < 150) small.push(n.v);
+  });
+  small.forEach(function(v) {
+    if (res.liters == null) res.liters = v;
+    else if (res.price == null) res.price = v;
+  });
+  var r2 = function(x) {
+    return Math.round(x * 100) / 100;
+  };
+  if (res.liters != null && res.price != null && res.sum == null) res.sum = r2(res.liters * res.price);
+  else if (res.liters != null && res.sum != null && res.price == null) res.price = r2(res.sum / res.liters);
+  else if (res.price != null && res.sum != null && res.liters == null) res.liters = r2(res.sum / res.price);
+  if (/(^| )не (до )?(полн|под завязку|до конца)/.test(raw) || /(^| )(частично|немного|долил[а-я]*|подлил[а-я]*|подкинул[а-я]*|добавил[а-я]*)( |$)/.test(raw) || /(пол ?бака|половин[а-я]* бака)/.test(raw)) res.full = false;
+  else if (/(до полного|полный|полная|полную|полностью|под завязку|под пробку|до пробки|до краев)/.test(raw)) res.full = true;
+  var pl = (ctx.places || []).slice().sort(function(a, b) {
+    return String(b).length - String(a).length;
+  });
+  for (var i = 0; i < pl.length && !res.place; i++) {
+    var nm = String(pl[i]).toLowerCase().replace(/ё/g, "е").trim();
+    if (nm && raw.indexOf(nm) >= 0) res.place = pl[i];
+  }
+  if (!res.place) {
+    for (var j = 0; j < VW_BRANDS.length; j++) {
+      if (new RegExp("(^| )" + VW_BRANDS[j][0]).test(raw)) {
+        res.place = VW_BRANDS[j][1];
+        break;
+      }
+    }
+  }
+  return res;
+}
+
+function vwSummary(r) {
+  return [r.liters != null ? nf1.format(r.liters) + " л" : null, r.price != null ? nf2.format(r.price) + " " + cur() + "/л" : null, r.sum != null ? money(r.sum) : null, r.odo != null ? km(r.odo) : null, r.full === true ? "до полного" : r.full === false ? "не до полного" : null, r.place].filter(Boolean).join(" · ");
+}
+function openVoiceFuel(onParsed) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition, car = curCar();
+  const ctx = () => ({ odo: car && car.odo, places: (S.places || []).map((p) => p.name) });
+  const ov = document.createElement("div");
+  ov.className = "ov";
+  ov.style.zIndex = 70;
+  ov.style.alignItems = "center";
+  ov.innerHTML = `<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Заправка голосом</b><button class="x" type="button" id="vX">✕</button></div><div class="shb">
+ <button type="button" class="btn full" id="vMic" style="padding:18px;font-size:18px">🎤 Нажмите и говорите</button>
+ <div class="mut sm" id="vMsg" style="margin:10px 0">Говорите как удобно, например: «залил сорок литров по шестьдесят два, пробег сто тридцать восемь пятьсот, до полного». Можно в любом порядке.</div>
+ <div class="f"><label>Что услышал (можно исправить или надиктовать кнопкой 🎤 на клавиатуре)</label><textarea id="vTxt" rows="2" style="min-height:64px"></textarea></div>
+ <div id="vRes" class="sm" style="margin-bottom:10px;min-height:20px"></div>
+ <button type="button" class="btn full" id="vOk">✔ Применить к записи</button></div></div>`;
+  document.body.appendChild(ov);
+  const txt = $("#vTxt", ov), res = $("#vRes", ov), msg = $("#vMsg", ov), mic = $("#vMic", ov);
+  let rec = null, listening = false;
+  const stopRec = () => {
+    try {
+      rec && rec.abort();
+    } catch (e) {
+    }
+    rec = null;
+    listening = false;
+  };
+  const close = () => {
+    stopRec();
+    ov.remove();
+  };
+  const show = () => {
+    const r = parseFuelSpeech(txt.value, ctx());
+    res.innerHTML = vwSummary(r) ? "<b>Понял:</b> " + esc(vwSummary(r)) : txt.value.trim() ? '<span class="mut">Числа не распознаны, попробуйте ещё раз</span>' : "";
+    return r;
+  };
+  const apply = () => {
+    const r = parseFuelSpeech(txt.value, ctx());
+    if (r.liters == null && r.price == null && r.sum == null && r.odo == null) {
+      show();
+      msg.textContent = "Не понял числа. Скажите, например: «сорок литров по шестьдесят два».";
+      return;
+    }
+    close();
+    onParsed(r, txt.value);
+  };
+  $("#vX", ov).onclick = close;
+  ov.addEventListener("click", (e) => {
+    if (e.target === ov) close();
+  });
+  txt.oninput = show;
+  $("#vOk", ov).onclick = apply;
+  mic.onclick = () => {
+    if (listening) {
+      try {
+        rec.stop();
+      } catch (e) {
+      }
+      return;
+    }
+    if (!SR) {
+      msg.textContent = "Распознавание речи недоступно. Нажмите 🎤 на клавиатуре iPhone в поле ниже, надиктуйте и нажмите «Применить».";
+      txt.focus();
+      return;
+    }
+    try {
+      rec = new SR();
+      rec.lang = "ru-RU";
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      rec.onresult = (e) => {
+        let s = "";
+        for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript + " ";
+        txt.value = s.trim();
+        show();
+      };
+      rec.onerror = (e) => {
+        const c = e && e.error;
+        msg.textContent = c === "not-allowed" || c === "service-not-allowed" ? "Нет доступа к микрофону или распознаванию речи. Разрешите в Настройки → Safari, либо нажмите 🎤 на клавиатуре в поле ниже." : c === "no-speech" ? "Ничего не услышал. Нажмите и повторите." : c === "network" ? "Нет связи для распознавания речи. Можно надиктовать клавиатурой в поле ниже." : "Не получилось распознать (" + (c || "ошибка") + "). Можно надиктовать клавиатурой в поле ниже.";
+        if (c === "not-allowed" || c === "service-not-allowed") txt.focus();
+      };
+      rec.onend = () => {
+        listening = false;
+        mic.textContent = "🎤 Нажмите и говорите";
+        mic.classList.remove("red");
+        rec = null;
+        const r = parseFuelSpeech(txt.value, ctx());
+        if (txt.value.trim() && (r.liters != null || r.price != null || r.sum != null || r.odo != null)) apply();
+      };
+      txt.value = "";
+      res.innerHTML = "";
+      msg.textContent = "Слушаю… говорите, затем замолчите.";
+      mic.textContent = "⏹ Слушаю… (нажмите, чтобы закончить)";
+      listening = true;
+      rec.start();
+    } catch (e) {
+      listening = false;
+      mic.textContent = "🎤 Нажмите и говорите";
+      msg.textContent = "Не удалось включить микрофон. Надиктуйте клавиатурой в поле ниже.";
+    }
+  };
+}
+
+function recForm(id, pre = {}) {
+  var _a, _b, _c;
+  const car = curCar(), ex = id ? S.records.find((r2) => r2.id === id) : null, lock = !ex && !!pre.lock;
+  const r = ex ? JSON.parse(JSON.stringify(ex)) : { id: uid(), carId: car.id, type: pre.type || "service", date: today(), odo: car.odo || "", items: pre.item ? [pre.item] : [], title: "", cost: "", place: "", notes: "", liters: "", full: true, photo: null };
+  const o = sheet(ex ? "Редактировать запись" : "Новая запись", `<form id="rf">
+ ${lock ? `<div id="lockHdr" class="flex between" style="margin-bottom:12px"><b style="font-size:17px">${CATS[r.type].i} ${CATS[r.type].n}</b><button type="button" id="chCat" style="color:var(--acc);font-size:14px">Другая категория</button></div>` : ""}
+ <div class="cats" id="catsRow" ${lock ? 'style="display:none"' : ""}>${Object.entries(CATS).map(([k, c]) => `<button type="button" data-c="${k}"><i>${c.i}</i>${c.n}</button>`).join("")}</div>
+ <button type="button" class="btn sec full" id="qrBtn" style="margin-bottom:12px">🧾 Сканировать QR с чека</button>
+ <div class="two">${fld("Дата", `<input type="date" name="date" value="${r.date}" required>`)}${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = r.odo) != null ? _a : ""}" placeholder="${car.odo || ""}">`)}</div>
+ <div id="itemsBox" class="f"><label>Что сделано / заменено</label><div class="chips" style="flex-wrap:wrap;overflow:visible" id="chipsArea"></div><div class="flex"><input id="newItem" placeholder="Своя позиция…" class="grow"><button type="button" class="btn sec" id="addItem">+</button></div></div>
+ ${fld("Название / описание", `<input name="title" value="${esc(r.extra != null ? r.extra : (r.items || []).length ? "" : r.title || "")}" placeholder="например: ТО-60 у официалов">`, "tt")}
+ <div id="fuelBox"><button type="button" class="btn sec full" id="micBtn" style="margin-bottom:12px">🎤 Сказать голосом</button><div class="two">${fld("Литры", `<input name="liters" inputmode="decimal" value="${(_b = r.liters) != null ? _b : ""}">`)}${fld("Цена за литр", `<input name="ppl" inputmode="decimal" placeholder="авто">`)}</div><div class="f"><label class="sw"><input type="checkbox" name="full" ${r.full !== false ? "checked" : ""}> Заправил «до полного» (для расчёта расхода)</label></div></div>
+ <div class="two">${fld("Сумма, " + cur(), `<input name="cost" inputmode="decimal" value="${(_c = r.cost) != null ? _c : ""}">`)}${fld("Место / сервис", `<input name="place" value="${esc(r.place || "")}" placeholder="АЗС, СТО…">`)}</div>
+ <div id="azsRow" style="display:none;margin:-2px 0 12px"><button type="button" class="btn sec" id="azsBtn">📍 АЗС рядом</button><div id="azsList" class="chips" style="flex-wrap:wrap;overflow:visible;margin-top:8px"></div></div>
+ ${fld("Заметки", `<textarea name="notes" placeholder="Артикулы, марка масла, что мастер сказал…">${esc(r.notes || "")}</textarea>`)}
+ <div class="f"><label>Фото (чек, заказ-наряд)</label><div class="flex" data-ph style="flex-wrap:wrap"></div></div>
+ <button class="btn full" type="submit">${ex ? "Сохранить" : "Добавить запись"}</button></form>`);
+  const F = $("#rf", o), E = F.elements;
+  if (lock) $("#chCat", o).onclick = () => {
+    $("#catsRow", o).style.display = "";
+    $("#lockHdr", o).style.display = "none";
+  };
+  const draw = () => {
+    $$(".cats button", o).forEach((b) => b.classList.toggle("on", b.dataset.c === r.type));
+    const fuel = r.type === "fuel";
+    $("#fuelBox", o).style.display = fuel ? "" : "none";
+    $("#itemsBox", o).style.display = fuel ? "none" : "";
+    $(".tt", o).style.display = fuel ? "none" : "";
+    $("#azsRow", o).style.display = fuel ? "" : "none";
+    const list = [...allItems(r.type)];
+    (r.items || []).forEach((i) => {
+      if (!list.some((x) => norm(x) === norm(i))) list.push(i);
+    });
+    $("#chipsArea", o).innerHTML = list.length ? list.map((i) => `<button type="button" class="chip ${(r.items || []).some((x) => norm(x) === norm(i)) ? "on" : ""}" data-i="${esc(i)}">${esc(i)}</button>`).join("") : '<span class="mut sm">Введите название ниже</span>';
+  };
+  o.addEventListener("click", (e) => {
+    const c = e.target.closest(".cats button");
+    if (c) {
+      r.type = c.dataset.c;
+      draw();
+      prefillFuel();
+      return;
+    }
+    const i = e.target.closest("[data-i]");
+    if (i) {
+      const v = i.dataset.i, k = norm(v);
+      r.items = r.items || [];
+      const ix = r.items.findIndex((x) => norm(x) === k);
+      ix >= 0 ? r.items.splice(ix, 1) : r.items.push(v);
+      draw();
+    }
+  });
+  const addI = () => {
+    const v = $("#newItem", o).value.trim();
+    if (!v) return;
+    r.items = r.items || [];
+    if (!r.items.some((x) => norm(x) === norm(v))) r.items.push(v);
+    $("#newItem", o).value = "";
+    draw();
+  };
+  $("#addItem", o).onclick = addI;
+  $("#newItem", o).onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addI();
+    }
+  };
+  const L = E.liters, P = E.ppl, C = E.cost;
+  const calc = (src) => {
+    const l = pn(L.value), p = pn(P.value), c = pn(C.value);
+    if (src !== "c" && l && p && src !== "x") {
+      C.value = Math.round(l * p * 100) / 100;
+    } else if (src === "c" && l && c) P.value = Math.round(c / l * 100) / 100;
+    else if (src === "l" && l && c && !p) P.value = Math.round(c / l * 100) / 100;
+  };
+  L.oninput = () => calc("l");
+  P.oninput = () => calc("p");
+  C.oninput = () => calc("c");
+  if (ex && ex.type === "fuel" && ex.liters && ex.cost) P.value = Math.round(ex.cost / ex.liters * 100) / 100;
+  photoField(o, () => r.photo, (v) => r.photo = v, "Добавить фото");
+  const lastFuel = !ex ? S.records.filter((x) => x.carId === car.id && x.type === "fuel" && x.liters > 0 && x.cost > 0).sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0))[0] : null;
+  let autoPlace = null;
+  const prefillFuel = () => {
+    if (!lastFuel) return;
+    if (r.type === "fuel") {
+      if (!P.value) P.value = Math.round(lastFuel.cost / lastFuel.liters * 100) / 100;
+      if (!E.place.value && lastFuel.place) {
+        E.place.value = lastFuel.place;
+        autoPlace = lastFuel.place;
+      }
+    } else if (autoPlace !== null && E.place.value === autoPlace) {
+      E.place.value = "";
+      autoPlace = null;
+    }
+  };
+  draw();
+  prefillFuel();
+  const azsBtn = $("#azsBtn", o), azsList = $("#azsList", o);
+  const hav = (a, b, c, d) => {
+    const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
+    const h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) * Math.sin(y / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
+  const OVP = ["https://overpass-api.de/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  const fetchOne = async (u, q) => {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 14000);
+    try {
+      const res = await fetch(u, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ac.signal });
+      if (!res.ok) throw new Error("http " + res.status);
+      return await res.json();
+    } finally {
+      clearTimeout(tm);
+    }
+  };
+  const overpass = (q) => new Promise((resolve, reject) => {
+    let left = OVP.length;
+    OVP.forEach((u) => fetchOne(u, q).then(resolve, (e) => {
+      if (--left === 0) reject(e);
+    }));
+  });
+  const findAzs = async (lat, lon) => {
+    const q = `[out:json][timeout:12];(node(around:600,${lat},${lon})[amenity=fuel];way(around:600,${lat},${lon})[amenity=fuel];);out center tags;`;
+    const j = await overpass(q);
+    return (j.elements || []).map((e) => {
+      const t = e.tags || {};
+      const la = e.lat != null ? e.lat : e.center && e.center.lat, lo = e.lon != null ? e.lon : e.center && e.center.lon;
+      return la == null || lo == null ? null : { name: t.brand || t.name || t.operator || "АЗС", dist: Math.round(hav(lat, lon, la, lo)) };
+    }).filter(Boolean).sort((a, b) => a.dist - b.dist);
+  };
+  const azsChips = (arr, title) => '<span class="mut sm" style="width:100%">' + title + '</span>' + arr.map((x) => `<button type="button" class="chip" data-azs="${esc(x.name)}">${esc(x.name === "АЗС" ? "АЗС без названия" : x.name)} · ${x.dist} м</button>`).join("");
+  let curPos = null;
+  const locate = (skipMine) => {
+    if (!navigator.geolocation) return toast("Геолокация недоступна в этом браузере");
+    azsBtn.disabled = true;
+    azsBtn.textContent = "📍 Ищу…";
+    azsList.innerHTML = "";
+    const done = () => {
+      azsBtn.disabled = false;
+      azsBtn.textContent = "📍 АЗС рядом";
+    };
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      curPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      try {
+        const mine = skipMine ? null : (S.places || []).map((pl) => ({ name: pl.name, dist: Math.round(hav(curPos.lat, curPos.lon, pl.lat, pl.lon)) })).filter((x) => x.dist <= 100).sort((a, b) => a.dist - b.dist)[0];
+        if (mine) {
+          E.place.value = mine.name;
+          autoPlace = E.place.value;
+          azsList.innerHTML = '<button type="button" class="chip" data-azsmap="1">🔎 Другая АЗС? Искать по карте</button>';
+          toast("📍 Ваше место: " + mine.name + " · " + mine.dist + " м");
+          done();
+          return;
+        }
+        const seen = new Set();
+        const list = (await findAzs(curPos.lat, curPos.lon)).filter((x) => {
+          const k = norm(x.name);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        }).slice(0, 5);
+        if (!list.length) toast("В радиусе 600 м АЗС не найдено, впишите вручную");
+        else if (list[0].dist <= 200) {
+          E.place.value = list[0].name;
+          autoPlace = E.place.value;
+          if (list.length > 1) azsList.innerHTML = azsChips(list.slice(1), "Рядом также:");
+          toast("📍 " + list[0].name + " · " + list[0].dist + " м");
+        } else {
+          azsList.innerHTML = azsChips(list, "Рядом АЗС нет. Ближайшие, нажмите нужную:");
+          toast("Ближайшая АЗС дальше 200 м: " + list[0].dist + " м");
+        }
+      } catch (e) {
+        toast("Карта не ответила (" + (e && e.message || "ошибка") + "). Попробуйте ещё раз");
+      }
+      done();
+    }, (err) => {
+      toast(err && err.code === 1 ? "Нет доступа к геолокации. Разрешите в Настройки → Конфиденциальность → Службы геолокации" : "Не удалось определить местоположение");
+      done();
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  };
+  azsBtn.onclick = () => locate(false);
+  azsList.addEventListener("click", (e) => {
+    if (e.target.closest("[data-azsmap]")) {
+      locate(true);
+      return;
+    }
+    const b = e.target.closest("[data-azs]");
+    if (b) {
+      E.place.value = b.dataset.azs;
+      autoPlace = E.place.value;
+    }
+  });
+  $("#qrBtn", o).onclick = () => openQrScanner((raw) => {
+    const q = parseFiscalQr(raw);
+    if (!q) {
+      toast("Это не QR кассового чека");
+      return;
+    }
+    E.date.value = q.date;
+    E.cost.value = q.sum;
+    if (!pn(L.value)) P.value = "";
+    C.dispatchEvent(new Event("input"));
+    const key = "ФН " + q.fn + " ФД " + q.fd;
+    if (!E.notes.value.includes(key)) E.notes.value = (E.notes.value ? E.notes.value + "\n" : "") + "Чек " + fmtDate(q.date) + " " + q.time + " · " + key + " ФП " + q.fp;
+    toast("🧾 " + fmtDate(q.date) + " · " + money(q.sum));
+  });
+  $("#micBtn", o).onclick = () => openVoiceFuel((v) => {
+    const rd = (x) => Math.round(x * 100) / 100;
+    if (v.price != null) P.value = v.price;
+    if (v.liters != null) L.value = v.liters;
+    if (v.sum != null) C.value = v.sum;
+    else if (v.liters != null && pn(P.value)) C.value = rd(v.liters * pn(P.value));
+    if (!pn(L.value) && pn(C.value) && pn(P.value)) L.value = rd(pn(C.value) / pn(P.value));
+    if (v.odo != null) E.odo.value = Math.round(v.odo);
+    if (v.full != null) E.full.checked = v.full;
+    if (v.place) {
+      E.place.value = v.place;
+      autoPlace = null;
+    }
+    toast("🎤 " + vwSummary(v));
+  });
+  F.onsubmit = (e) => {
+    e.preventDefault();
+    const g = (n) => E[n].value;
+    const odo = pn(g("odo")), date = g("date");
+    const rec = { id: r.id, carId: car.id, type: r.type, date, odo, cost: pn(g("cost")) || 0, place: g("place").trim(), notes: g("notes").trim(), photo: r.photo || null };
+    if (r.type === "fuel") {
+      rec.liters = pn(g("liters")) || 0;
+      rec.full = E.full.checked;
+      rec.items = [];
+      rec.title = "Заправка";
+    } else {
+      rec.items = r.items || [];
+      const t = g("title").trim();
+      rec.extra = t;
+      rec.title = [rec.items.join(", "), t].filter(Boolean).join(" — ") || CATS[r.type].n;
+    }
+    if (odo != null) {
+      const prev = S.records.filter((x) => x.carId === car.id && x.id !== rec.id && x.odo != null);
+      const before = prev.filter((x) => x.date <= date).sort((a, b) => b.date.localeCompare(a.date) || b.odo - a.odo)[0], after = prev.filter((x) => x.date > date).sort((a, b) => a.date.localeCompare(b.date))[0];
+      if (before && odo < before.odo || after && odo > after.odo) {
+        if (!confirm("Пробег не вписывается в хронологию соседних записей. Всё равно сохранить?")) return;
+      }
+    }
+    if (r.type === "fuel" && curPos && rec.place) {
+      S.places = S.places || [];
+      const near = S.places.map((pl) => ({ pl, d: hav(curPos.lat, curPos.lon, pl.lat, pl.lon) })).filter((x) => x.d <= 100).sort((a, b) => a.d - b.d)[0];
+      if (near) near.pl.name = rec.place;
+      else S.places.push({ id: uid(), name: rec.place, lat: curPos.lat, lon: curPos.lon });
+    }
+    const i = S.records.findIndex((x) => x.id === rec.id);
+    i >= 0 ? S.records[i] = rec : S.records.push(rec);
+    if (odo != null && odo > (car.odo || 0)) car.odo = odo;
+    save();
+    closeSheet();
+    render();
+    toast(ex ? "Сохранено ✓" : "Запись добавлена ✓");
+  };
+}
+function recDetail(id) {
+  const r = S.records.find((x) => x.id === id);
+  if (!r) return;
+  const c = CATS[r.type] || CATS.other;
+  const sg = fuelSegs(r.carId).find((s) => s.rid === id);
+  const rows = [["Категория", c.i + " " + c.n], ["Дата", fmtDate(r.date)], ["Пробег", r.odo != null ? km(r.odo) : null], ["Сумма", r.cost ? money(r.cost) : null], r.type === "fuel" ? ["Литры", r.liters ? nf1.format(r.liters) + " л" : null] : null, r.type === "fuel" && r.liters && r.cost ? ["Цена литра", nf2.format(r.cost / r.liters) + " " + cur()] : null, r.type === "fuel" ? ["Полный бак", r.full ? "да" : "нет"] : null, sg ? ["Расход на участке", nf1.format(sg.l100) + " л/100 км (" + km(sg.km) + ")"] : null, r.place ? ["Место", esc(r.place)] : null].filter((x) => x && x[1]);
+  sheet(esc(recTitle(r)), `${rows.map((x) => `<div class="kv"><span>${x[0]}</span><span>${x[1]}</span></div>`).join("")}${(r.items || []).length ? `<div class="kv"><span>Позиции</span><span>${r.items.map(esc).join(", ")}</span></div>` : ""}${r.notes ? `<div class="card sm" style="margin-top:10px;white-space:pre-wrap">${esc(r.notes)}</div>` : ""}${r.photo ? `<img class="photo" src="${r.photo}">` : ""}
+ <div class="two" style="margin-top:14px"><button class="btn sec" data-a="recEdit" data-id="${id}">✏️ Изменить</button><button class="btn sec" data-a="recDup" data-id="${id}">⧉ Повторить</button></div><button class="btn red full" style="margin-top:10px" data-a="recDel" data-id="${id}">Удалить</button>`);
+}
+function carForm(id) {
+  var _a;
+  const ex = id ? S.cars.find((c2) => c2.id === id) : null, c = ex ? __spreadValues({}, ex) : { id: uid(), name: "", make: "", year: "", plate: "", vin: "", odo: "", fuel: "", notes: "", photo: null };
+  const o = sheet(ex ? "Автомобиль" : "Новый автомобиль", `<form id="cf">
+ ${fld("Название", `<input name="name" value="${esc(c.name)}" placeholder="Моя Camry" required>`)}
+ ${fld("Марка / модель", `<input name="make" value="${esc(c.make)}" placeholder="Toyota Camry">`)}
+ <div class="two">${fld("Год", `<input name="year" inputmode="numeric" value="${esc(c.year)}">`)}${fld("Госномер", `<input name="plate" value="${esc(c.plate)}">`)}</div>
+ ${fld("Текущий пробег, км", `<input name="odo" inputmode="numeric" value="${(_a = c.odo) != null ? _a : ""}" required>`)}
+ ${fld("VIN", `<input name="vin" value="${esc(c.vin)}" style="text-transform:uppercase">`)}
+ ${fld("Топливо / двигатель", `<input name="fuel" value="${esc(c.fuel)}" placeholder="АИ-95, 2.5 л">`)}
+ ${fld("Заметки", `<textarea name="notes">${esc(c.notes)}</textarea>`)}
+ <div class="f"><label>Фото</label><div class="flex" data-ph style="flex-wrap:wrap"></div></div>
+ ${ex ? "" : `<div class="f"><label class="sw"><input type="checkbox" name="defs" checked> Добавить стандартные интервалы обслуживания</label></div>`}
+ <button class="btn full" type="submit">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="carDel" data-id="${id}">Удалить авто и все его записи</button>` : ""}</form>`);
+  photoField(o, () => c.photo, (v) => c.photo = v, "Фото авто");
+  $("#cf", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    Object.assign(c, { name: F.name.value.trim(), make: F.make.value.trim(), year: F.year.value.trim(), plate: F.plate.value.trim(), vin: F.vin.value.trim().toUpperCase(), fuel: F.fuel.value.trim(), notes: F.notes.value.trim(), odo: pn(F.odo.value) || 0 });
+    const i = S.cars.findIndex((x) => x.id === c.id);
+    if (i >= 0) S.cars[i] = c;
+    else {
+      S.cars.push(c);
+      S.active = c.id;
+      if (F.defs && F.defs.checked) addDefaults(c.id);
+    }
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function addDefaults(carId) {
+  DEFAULT_REM.forEach((d) => {
+    if (!S.reminders.some((r) => r.carId === carId && norm(r.title) === norm(d[0]))) S.reminders.push({ id: uid(), carId, title: d[0], km: d[1], months: d[2] });
+  });
+}
+function odoForm() {
+  const car = curCar();
+  const o = sheet("Текущий пробег", `<form id="of">${fld("Пробег, км", `<input name="odo" inputmode="numeric" value="${car.odo || ""}" required autofocus>`)}<button class="btn full">Сохранить</button></form>`);
+  $("#of", o).onsubmit = (e) => {
+    e.preventDefault();
+    const v = pn(e.target.elements.odo.value);
+    if (v == null) return;
+    if (v < car.odo && !confirm("Новый пробег меньше текущего. Продолжить?")) return;
+    car.odo = v;
+    save();
+    closeSheet();
+    render();
+    toast("Пробег обновлён ✓");
+  };
+}
+function remForm(id) {
+  var _a;
+  const car = curCar(), ex = id ? S.reminders.find((r2) => r2.id === id) : null, r = ex || { id: uid(), carId: car.id, title: "", km: "", months: "" };
+  const o = sheet(ex ? "Расходник" : "Новый расходник", `<form id="mf">${fld("Название", `<input name="title" list="dl" value="${esc(r.title)}" required placeholder="Масло двигателя"><datalist id="dl">${PRESETS.service.concat(PRESETS.tires).map((x) => `<option value="${esc(x)}">`).join("")}</datalist>`)}
+ <div class="two">${fld("Менять каждые, км", `<input name="km" inputmode="numeric" value="${r.km || ""}" placeholder="10000">`)}${fld("и/или каждые, мес.", `<input name="months" inputmode="numeric" value="${r.months || ""}" placeholder="12">`)}</div>
+ <div class="mut sm" style="margin:-4px 0 10px">Дата и пробег последней замены берутся из записей в истории. Если записей ещё нет — укажите вручную:</div>
+ <div class="two">${fld("Последняя замена, дата", `<input type="date" name="bd" value="${r.baseDate || ""}">`)}${fld("на пробеге, км", `<input name="bo" inputmode="numeric" value="${(_a = r.baseOdo) != null ? _a : ""}">`)}</div>
+ <button class="btn full">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="remDel" data-id="${id}">Удалить</button>` : ""}</form>`);
+  $("#mf", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    const t = F.title.value.trim();
+    if (!pn(F.km.value) && !pn(F.months.value)) {
+      toast("Укажите интервал в км или месяцах");
+      return;
+    }
+    Object.assign(r, { title: t, km: pn(F.km.value) || 0, months: pn(F.months.value) || 0, baseDate: F.bd.value || null, baseOdo: pn(F.bo.value) });
+    if (!ex) S.reminders.push(r);
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function docForm(id) {
+  const car = curCar(), ex = id ? S.docs.find((d2) => d2.id === id) : null, d = ex || { id: uid(), carId: car.id, title: "", expires: "", notes: "" };
+  const o = sheet(ex ? "Документ" : "Новый документ", `<form id="df">${fld("Название", `<input name="title" list="dl2" value="${esc(d.title)}" required placeholder="ОСАГО"><datalist id="dl2">${["ОСАГО", "КАСКО", "Техосмотр", "Диагностическая карта", "Транспортный налог", "Водительское удостоверение", "Страховка (доп.)"].map((x) => `<option value="${x}">`).join("")}</datalist>`)}${fld("Действует до", `<input type="date" name="ex" value="${d.expires}" required>`)}${fld("Заметки", `<textarea name="n">${esc(d.notes)}</textarea>`)}<button class="btn full">${ex ? "Сохранить" : "Добавить"}</button>${ex ? `<button type="button" class="btn red full" style="margin-top:10px" data-a="docDel" data-id="${id}">Удалить</button>` : ""}</form>`);
+  $("#df", o).onsubmit = (e) => {
+    e.preventDefault();
+    const F = e.target.elements;
+    Object.assign(d, { title: F.title.value.trim(), expires: F.ex.value, notes: F.n.value.trim() });
+    if (!ex) S.docs.push(d);
+    save();
+    closeSheet();
+    render();
+    toast("Сохранено ✓");
+  };
+}
+function carsSheet() {
+  sheet("Мои автомобили", `${S.cars.map((c) => `<button class="card flex" style="width:100%;text-align:left;${c.id === curCar().id ? "border-color:var(--acc)" : ""}" data-a="carPick" data-id="${c.id}"><span style="font-size:26px">🚗</span><div class="grow"><b>${esc(c.name)}</b><div class="mut sm">${km(c.odo)}</div></div>${c.id === curCar().id ? "✓" : ""}</button>`).join("")}<button class="btn full" data-a="carAdd">➕ Добавить автомобиль</button>`);
+}
+function download(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 1500);
+}
+async function exportJSON(share) {
+  const name = `avto2-${today()}.json`, blob = new Blob([JSON.stringify(S)], { type: "application/json" });
+  if (share) {
+    const f = new File([blob], name, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try {
+        await navigator.share({ files: [f], title: "Дневник авто 2 — копия" });
+      } catch (e) {
+        if (e.name === "AbortError") return;
+      }
+    } else {
+      toast("Отправка недоступна — скачиваю файл");
+      download(blob, name);
+    }
+  } else download(blob, name);
+  S.settings.lastBackup = today();
+  save();
+  render();
+  toast("Копия сохранена ✓");
+}
+function exportCSV() {
+  const car = curCar(), q = (s) => '"' + String(s != null ? s : "").replace(/"/g, '""') + '"';
+  const rows = [["Дата", "Пробег", "Категория", "Название", "Сумма", "Литры", "Цена/л", "Место", "Заметки"]];
+  carRecs(car.id).reverse().forEach((r) => {
+    var _a;
+    return rows.push([fmtDate(r.date), (_a = r.odo) != null ? _a : "", CATS[r.type].n, r.title, r.cost || "", r.liters || "", r.liters && r.cost ? nf2.format(r.cost / r.liters) : "", r.place, r.notes]);
+  });
+  download(new Blob(["\uFEFF" + rows.map((r) => r.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), `${car.name}-istoriya.csv`);
+}
+function importFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d;
+    try {
+      d = JSON.parse(fr.result);
+    } catch (e) {
+      return toast("Это не файл дневника");
+    }
+    if (!d || !Array.isArray(d.cars) || !Array.isArray(d.records)) return toast("Неверный формат файла");
+    const o = sheet("Импорт данных", `<div class="card"><div class="kv"><span>Автомобилей</span><span>${d.cars.length}</span></div><div class="kv"><span>Записей</span><span>${d.records.length}</span></div><div class="kv"><span>Напоминаний</span><span>${(d.reminders || []).length}</span></div></div>
+  <div style="display:grid;gap:10px"><button class="btn" id="im1">➕ Объединить с текущими</button><button class="btn red" id="im2">♻️ Заменить всё</button></div><p class="mut sm">«Объединить» добавит только то, чего у вас ещё нет.</p>`);
+    const done = () => {
+      if (!S.active || !S.cars.some((c) => c.id === S.active)) S.active = S.cars[0] && S.cars[0].id;
+      save();
+      closeSheet();
+      render();
+      toast("Импортировано ✓");
+    };
+    $("#im1", o).onclick = () => {
+      ["cars", "records", "reminders", "docs", "places", "trips"].forEach((k) => {
+        const have = new Set((S[k] || []).map((x) => x.id));
+        (d[k] || []).forEach((x) => {
+          if (!have.has(x.id)) S[k].push(x);
+        });
+      });
+      done();
+    };
+    $("#im2", o).onclick = () => {
+      if (!confirm("Все текущие данные будут заменены. Продолжить?")) return;
+      S = Object.assign(blank(), d);
+      S.settings = Object.assign(blank().settings, d.settings || {});
+      done();
+    };
+  };
+  fr.readAsText(file);
+}
+
+/* ---------- Перенос из FuelTracker ---------- */
+function ftLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem("fuelData") || "null");
+    return d && d.cars && typeof d.cars === "object" ? d : null;
+  } catch (e) {
+    return null;
+  }
+}
+function ftCount(d) {
+  const cars = Object.values(d && d.cars || {});
+  return { cars: cars.length, refills: cars.reduce((s, c) => s + (Array.isArray(c.refills) ? c.refills.length : 0), 0) };
+}
+function ftConvert(d) {
+  const out = { cars: [], records: [], oil: [] };
+  Object.values(d.cars || {}).forEach((c) => {
+    const id = "ft_" + c.id, refills = Array.isArray(c.refills) ? c.refills : [];
+    const odos = refills.map((r) => +r.odometer).filter((v) => isFinite(v) && v > 0);
+    const oil = c.oilChange || {};
+    const notes = Object.entries(c.notes || {}).map(([k, v]) => k + ": " + (v && v.value != null ? v.value : v)).join("\n");
+    out.cars.push({ id, name: c.name || "Автомобиль", make: "", year: "", plate: "", vin: "", fuel: "", notes, odo: Math.max(0, ...odos, +oil.lastOdometer || 0), photo: null });
+    refills.forEach((r) => {
+      const liters = +r.liters || 0, price = +r.pricePerLiter || +c.pricePerLiter || 0, cost = +r.cost || liters * price, dt = new Date(r.date);
+      if (!(liters > 0) || !(+r.odometer > 0)) return;
+      out.records.push({ id: "ft_" + c.id + "_" + r.id, carId: id, type: "fuel", date: isNaN(dt) ? today() : iso(dt), odo: Math.round(+r.odometer), title: "Заправка", items: [], cost: Math.round(cost * 100) / 100, place: "", notes: "", photo: null, liters, full: true });
+    });
+    if (+oil.lastOdometer > 0) out.oil.push({ carId: id, km: +oil.interval || 1e4, baseOdo: Math.round(+oil.lastOdometer) });
+  });
+  return out;
+}
+function ftOffer(d, from) {
+  const conv = ftConvert(d), haveR = new Set(S.records.map((r) => r.id)), haveC = new Set(S.cars.map((c) => c.id));
+  const newR = conv.records.filter((r) => !haveR.has(r.id)).length, newC = conv.cars.filter((c) => !haveC.has(c.id)).length;
+  if (!conv.cars.length) return toast("В файле нет автомобилей FuelTracker");
+  const o = sheet("⛽ Перенос из FuelTracker", `<div class="card"><div class="kv"><span>Автомобилей</span><span>${conv.cars.length}${newC < conv.cars.length ? " (уже есть: " + (conv.cars.length - newC) + ")" : ""}</span></div><div class="kv"><span>Заправок</span><span>${conv.records.length}</span></div><div class="kv"><span>Новых заправок</span><span><b>${newR}</b></span></div>${conv.oil.length ? '<div class="kv"><span>Замена масла (интервал и пробег)</span><span>перенесётся</span></div>' : ""}</div>
+ <p class="sm mut">Заправки появятся в истории как «до полного», расход считается между соседними заправками. Заметки о машине попадут в карточку авто. Повторный перенос дубли не создаёт. FuelTracker не изменяется.</p>
+ <button class="btn full" id="ftGo" ${newR || newC ? "" : "disabled"}>Перенести${newR ? " (" + newR + ")" : ""}</button>`);
+  $("#ftGo", o).onclick = () => {
+    conv.cars.forEach((c) => {
+      const ex = S.cars.find((x) => x.id === c.id);
+      if (!ex) {
+        S.cars.push(c);
+        addDefaults(c.id);
+      } else ex.odo = Math.max(ex.odo || 0, c.odo || 0);
+    });
+    conv.records.forEach((r) => {
+      if (!haveR.has(r.id)) S.records.push(r);
+    });
+    conv.oil.forEach((x) => {
+      const rem = S.reminders.find((r) => r.carId === x.carId && norm(r.title) === norm("Масло двигателя"));
+      if (rem) {
+        if (rem.baseOdo == null || !haveC.has(x.carId)) {
+          rem.baseOdo = x.baseOdo;
+          rem.km = x.km;
+        }
+      } else S.reminders.push({ id: uid(), carId: x.carId, title: "Масло двигателя", km: x.km, months: 12, baseOdo: x.baseOdo });
+    });
+    if (!S.active || !S.cars.some((c) => c.id === S.active)) S.active = S.cars[0] && S.cars[0].id;
+    save();
+    closeSheet();
+    render();
+    toast("Перенесено заправок: " + newR + " ✓");
+  };
+}
+function ftSheet() {
+  const loc = ftLocal(), n = loc ? ftCount(loc) : null;
+  const o = sheet("⛽ Перенос из FuelTracker", `<p class="sm" style="margin-top:0">Перенесите автомобили, заправки, пробег и заметки из FuelTracker. Эта копия работает отдельно и свои данные не смешивает с другими приложениями.</p>
+ ${n && n.refills ? `<button class="btn full" id="ftLoc" style="margin-bottom:10px">Взять из этого браузера: авто ${n.cars}, заправок ${n.refills}</button>` : ""}
+ <label class="btn sec full">📥 Выбрать файл из FuelTracker (.json)<input type="file" accept=".json,application/json" hidden data-ft></label>
+ <p class="mut sm" style="margin-top:12px">Как получить файл: откройте FuelTracker → «📤 Экспорт данных» → сохраните файл в «Файлы». Затем выберите его здесь. Если FuelTracker и этот дневник открыты в одном браузере (Safari), первая кнопка возьмёт данные сама. Значки на экране «Домой» на iPhone хранят данные раздельно, тогда нужен файл.</p>`);
+  const b = $("#ftLoc", o);
+  if (b) b.onclick = () => ftOffer(loc, "browser");
+}
+function ftFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d = null;
+    try {
+      d = JSON.parse(fr.result);
+    } catch (e) {
+    }
+    if (!d || !d.cars || Array.isArray(d.cars) || typeof d.cars !== "object") return toast("Это не файл FuelTracker");
+    ftOffer(d, "file");
+  };
+  fr.readAsText(file);
+}
+function printReport() {
+  const car = curCar(), rs = carRecs(car.id), st = stats(car, 0), rl = remList(car);
+  $("#print").innerHTML = `<h1>${esc(car.name)}</h1><div>${esc([car.make, car.year, car.plate, car.vin && "VIN " + car.vin].filter(Boolean).join(" · "))}<br>Пробег: ${km(car.odo)} · Отчёт от ${fmtDate(today())}</div>
+ <h2>Итого</h2><div>Потрачено: ${money(st.total)} · Средний расход: ${st.l100 ? nf1.format(st.l100) + " л/100 км" : "—"}</div>
+ <h2>Расходники</h2><table><tr><th>Позиция</th><th>Интервал</th><th>Последний раз</th><th>Следующий</th></tr>${rl.map((s) => `<tr><td>${esc(s.r.title)}</td><td>${[s.r.km ? km(s.r.km) : "", s.r.months ? s.r.months + " мес." : ""].filter(Boolean).join(" / ")}</td><td>${s.lastDate ? fmtDate(s.lastDate) : ""} ${s.lastOdo != null ? km(s.lastOdo) : ""}</td><td>${s.nextOdo != null ? km(s.nextOdo) : ""} ${s.nextDate ? fmtDate(s.nextDate) : ""}</td></tr>`).join("")}</table>
+ <h2>История</h2><table><tr><th>Дата</th><th>Пробег</th><th>Запись</th><th>Сумма</th><th>Место</th></tr>${rs.map((r) => {
+    var _a;
+    return `<tr><td>${fmtDate(r.date)}</td><td>${(_a = r.odo) != null ? _a : ""}</td><td>${esc(recTitle(r))}${r.notes ? "<br><i>" + esc(r.notes) + "</i>" : ""}</td><td>${r.cost ? nf0.format(r.cost) : ""}</td><td>${esc(r.place || "")}</td></tr>`;
+  }).join("")}</table>`;
+  setTimeout(() => window.print(), 100);
+}
+function demo() {
+  const id = uid(), t = /* @__PURE__ */ new Date(), dt = (n) => iso(new Date(t.getTime() - n * 864e5));
+  S = blank();
+  S.settings.lastBackup = null;
+  S.cars = [{ id, name: "Моя Camry", make: "Toyota Camry", year: "2018", plate: "А777АА 125", vin: "", fuel: "АИ-95, 2.5 л", notes: "", odo: 87400, photo: null }];
+  S.active = id;
+  addDefaults(id);
+  const R = (n, o, type, title, cost, extra = {}) => S.records.push(Object.assign({ id: uid(), carId: id, type, date: dt(n), odo: o, title, items: [], cost, place: "", notes: "", photo: null }, extra));
+  R(430, 74200, "service", "Масло двигателя, Масляный фильтр", 9800, { items: ["Масло двигателя", "Масляный фильтр"], place: "Toyota-сервис" });
+  R(300, 79800, "service", "Салонный фильтр, Воздушный фильтр", 3200, { items: ["Салонный фильтр", "Воздушный фильтр"] });
+  R(200, 83e3, "tires", "Шиномонтаж сезонный", 3500, { items: ["Шиномонтаж сезонный"] });
+  R(120, 85200, "service", "Масло двигателя, Масляный фильтр", 10400, { items: ["Масло двигателя", "Масляный фильтр"], place: "СТО на Фокина" });
+  R(60, 86600, "repair", "Подвеска — стойки стабилизатора", 7800);
+  R(14, 87300, "docs", "ОСАГО", 11200, { items: ["ОСАГО"] });
+  const fills = [[330, 75e3, 52, 2860, 1], [290, 76400, 50, 2750, 1], [240, 78300, 48, 2640, 1], [180, 80900, 51, 2900, 1], [130, 83600, 47, 2740, 1], [90, 85500, 49, 2900, 1], [45, 86500, 36, 2150, 1], [20, 87e3, 40, 2400, 1]];
+  fills.forEach((f) => R(f[0], f[1], "fuel", "Заправка", f[3], { liters: f[2], full: true, place: "АЗС" }));
+  S.docs.push({ id: uid(), carId: id, title: "ОСАГО", expires: iso(new Date(t.getTime() + 350 * 864e5)), notes: "" }, { id: uid(), carId: id, title: "Техосмотр", expires: iso(new Date(t.getTime() + 20 * 864e5)), notes: "" });
+  save();
+  render();
+  toast("Демо загружено");
+}
+const A = {
+  close: closeSheet,
+  tab: (d) => {
+    ui.view = d.v;
+    closeSheet();
+    render();
+    scrollTo(0, 0);
+  },
+  addRec: (d) => recForm(null, { type: d.t, item: d.item, lock: d.lock === "1" }),
+  calToggle: () => {
+    ui.calOpen = !ui.calOpen;
+    render();
+  },
+  calNav: (d) => {
+    const td = today(), cur0 = ui.calM || td.slice(0, 7);
+    if (+d.dir === 0) {
+      ui.calM = td.slice(0, 7);
+      ui.calSel = td;
+    } else {
+      const dt = new Date(+cur0.slice(0, 4), +cur0.slice(5, 7) - 1 + +d.dir, 1);
+      ui.calM = dt.getFullYear() + "-" + pad(dt.getMonth() + 1);
+      ui.calSel = null;
+    }
+    render();
+  },
+  calDay: (d) => {
+    ui.calSel = ui.calSel === d.d ? null : d.d;
+    render();
+  },
+  tripToggle: () => {
+    ui.tripOpen = !ui.tripOpen;
+    render();
+  },
+  tripP: (d) => {
+    ui.tripP = d.p;
+    render();
+  },
+  tripStart: () => {
+    const car = curCar();
+    if (!car) return toast("Сначала добавьте автомобиль");
+    const dflt = tripDefaults(car), p0 = $("#tpPrice0"), l0 = $("#tpL1000");
+    const price = p0 && pn(p0.value) != null ? pn(p0.value) : dflt.price, l100 = l0 && pn(l0.value) != null ? pn(l0.value) : dflt.l100;
+    if (p0 && pn(p0.value) != null) S.settings.tripPrice = pn(p0.value);
+    if (l0 && pn(l0.value) != null) S.settings.tripL100 = pn(l0.value);
+    save();
+    tripPut({ id: uid(), carId: car.id, start: Date.now(), km: 0, price, l100, last: null, acc: null, fixT: null, state: "run", end: null });
+    tripTrack();
+    render();
+  },
+  tripStop: () => {
+    const t = tripGet();
+    if (!t) return;
+    tripHalt();
+    t.state = "stopped";
+    t.end = Date.now();
+    tripPut(t);
+    render();
+    tripFinish();
+  },
+  tripFinish,
+  tripCancel: () => {
+    if (!confirm("Отменить рейс без сохранения?")) return;
+    tripHalt();
+    tripPut(null);
+    render();
+  },
+  tripOpen: (d) => tripEdit(d.id),
+  tripAdd: tripAddManual,
+  recOpen: (d) => recDetail(d.id),
+  recEdit: (d) => recForm(d.id),
+  recDup: (d) => {
+    const r = S.records.find((x) => x.id === d.id);
+    const n = JSON.parse(JSON.stringify(r));
+    n.id = uid();
+    n.date = today();
+    n.odo = curCar().odo;
+    S.records.push(n);
+    save();
+    closeSheet();
+    recForm(n.id);
+  },
+  recDel: (d) => {
+    if (confirm("Удалить запись?")) {
+      S.records = S.records.filter((x) => x.id !== d.id);
+      save();
+      closeSheet();
+      render();
+      toast("Удалено");
+    }
+  },
+  cat: (d) => {
+    ui.cat = d.c;
+    render();
+  },
+  period: (d) => {
+    ui.period = d.p;
+    render();
+  },
+  odo: odoForm,
+  cars: carsSheet,
+  carAdd: () => carForm(),
+  ftImport: ftSheet,
+  carEdit: (d) => carForm(d.id),
+  carPick: (d) => {
+    S.active = d.id;
+    save();
+    closeSheet();
+    render();
+  },
+  carDel: (d) => {
+    if (confirm("Удалить автомобиль вместе со всеми записями и напоминаниями?")) {
+      S.cars = S.cars.filter((c) => c.id !== d.id);
+      ["records", "reminders", "docs"].forEach((k) => S[k] = S[k].filter((x) => x.carId !== d.id));
+      S.active = S.cars[0] && S.cars[0].id;
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  remAdd: () => remForm(),
+  remEdit: (d) => remForm(d.id),
+  remDel: (d) => {
+    if (confirm("Удалить расходник из списка? Записи в истории останутся.")) {
+      S.reminders = S.reminders.filter((r) => r.id !== d.id);
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  remDefaults: () => {
+    addDefaults(curCar().id);
+    save();
+    render();
+    toast("Добавлено — проверьте интервалы");
+  },
+  docAdd: () => docForm(),
+  docEdit: (d) => docForm(d.id),
+  docDel: (d) => {
+    if (confirm("Удалить документ?")) {
+      S.docs = S.docs.filter((x) => x.id !== d.id);
+      save();
+      closeSheet();
+      render();
+    }
+  },
+  icsExport: exportIcs,
+  badgeOn: async () => {
+    try {
+      if (Notification.permission !== "granted") {
+        const p = await Notification.requestPermission();
+        if (p !== "granted") return toast("Разрешение не выдано. Включить: Настройки iPhone → Уведомления");
+      }
+      setBadge(allAlerts().length);
+      render();
+      toast("Значок включён ✓");
+    } catch (e) {
+      toast("Не получилось включить значок");
+    }
+  },
+  exp: () => exportJSON(false),
+  share: () => exportJSON(true),
+  csv: exportCSV,
+  print: printReport,
+  demo,
+  wipe: () => {
+    if (confirm("Удалить ВСЕ данные без возможности восстановления?") && confirm("Точно удалить? Сначала лучше сделать копию.")) {
+      S = blank();
+      tripHalt();
+      tripPut(null);
+      save();
+      render();
+      toast("Данные удалены");
+    }
+  }
+};
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-a]");
+  if (!el) return;
+  const f = A[el.dataset.a];
+  if (f) {
+    e.preventDefault();
+    f(el.dataset, el);
+  }
+});
+document.addEventListener("input", (e) => {
+  const id = e.target && e.target.id;
+  if (id === "tripKm") tripCalc();
+  if (id === "tpPrice" || id === "tpL100") {
+    const t = tripGet();
+    if (t) {
+      t[id === "tpPrice" ? "price" : "l100"] = pn(e.target.value);
+      tripPut(t);
+      tripUI();
+    }
+  }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.matches && t.matches("[data-imp]") && t.files[0]) {
+    importFile(t.files[0]);
+    t.value = "";
+  }
+  if (t.matches && t.matches("[data-ft]") && t.files[0]) {
+    ftFile(t.files[0]);
+    t.value = "";
+  }
+  if (t.id === "stFrom" || t.id === "stTo") {
+    const r0 = statPeriod();
+    ui.pFrom = t.id === "stFrom" ? t.value || r0.from : r0.from === "0000-00-00" ? "" : r0.from;
+    ui.pTo = t.id === "stTo" ? t.value || r0.to : r0.to === "9999-99-99" ? "" : r0.to;
+    ui.period = "range";
+    render();
+  }
+  if (t.id === "alPop") {
+    S.settings.alertPopup = t.checked;
+    save();
+  }
+  if (t.id === "tpFrom" || t.id === "tpTo") {
+    const q0 = ui.tripP || "month", td0 = today();
+    if (q0 !== "range") {
+      ui.tripFrom = q0 === "day" ? td0 : td0.slice(0, 8) + "01";
+      ui.tripTo = td0;
+    }
+    ui.tripP = "range";
+    if (t.value) ui[t.id === "tpFrom" ? "tripFrom" : "tripTo"] = t.value;
+    if (ui.tripFrom && ui.tripTo && ui.tripFrom > ui.tripTo) {
+      const x = ui.tripFrom;
+      ui.tripFrom = ui.tripTo;
+      ui.tripTo = x;
+    }
+    render();
+  }
+  if (t.id === "tpPrice0" || t.id === "tpL1000") {
+    S.settings[t.id === "tpPrice0" ? "tripPrice" : "tripL100"] = pn(t.value);
+    save();
+  }
+  if (t.id === "cu") {
+    S.settings.currency = t.value.trim() || "₽";
+    save();
+  }
+  if (t.id === "th") {
+    S.settings.theme = t.value;
+    save();
+    render();
+  }
+});
+function makeIcon() {
+  return;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 180;
+    const x = c.getContext("2d");
+    const g = x.createLinearGradient(0, 0, 180, 180);
+    g.addColorStop(0, "#4f8cff");
+    g.addColorStop(1, "#7a5cff");
+    x.fillStyle = g;
+    x.fillRect(0, 0, 180, 180);
+    x.font = "100px serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillText("🚗", 90, 98);
+    
+  } catch (e) {
+  }
+}
+(async () => {
+  try {
+    makeIcon();
+    try {
+      await load();
+    } catch (e) {
+    }
+    applyTheme();
+    render();
+    tripTrack();
+    setTimeout(dailyAlert, 700);
+    if (!S.cars.length && ftLocal() && ftCount(ftLocal()).refills) setTimeout(ftSheet, 900);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && tripGet() && tripGet().state === "run") {
+        tripKeepAwake();
+        tripTrack();
+        tripUI();
+      }
+    });
+    const u = $("#usage");
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then((e) => {
+        const el = $("#usage");
+        if (el) el.textContent = "Занято в хранилище: " + nf1.format((e.usage || 0) / 1048576) + " МБ";
+      });
+    }
+    window.__ready = 1;
+  } catch (e) {
+    window.__show && window.__show("Старт: " + (e && e.stack || e));
+  }
+})();
+</script>
+<script>
+/* Проверка обновлений: при открытии подтягивает свежую версию страницы и один раз перезагружает, если она изменилась */
+(function(){try{
+ if(!window.fetch||location.protocol.indexOf('http')!==0)return;
+ function hs(t){var h=5381,i=t.length;while(i)h=(h*33)^t.charCodeAt(--i);return (h>>>0).toString(36)+':'+t.length}
+ fetch(location.pathname,{cache:'reload'}).then(function(r){return r.ok?r.text():null}).then(function(t){
+  if(!t)return;var h=hs(t),old=null;
+  try{old=localStorage.getItem('cd2_ver');localStorage.setItem('cd2_ver',h)}catch(e){return}
+  if(old&&old!==h&&!sessionStorage.getItem('cd2_rl')){sessionStorage.setItem('cd2_rl','1');location.reload()}
+ }).catch(function(){});
+}catch(e){}})();
+</script>
+<script>
+/* Чтение QR кассового чека (ФНС): дата, время, сумма и реквизиты. Состав чека в QR не передаётся. */
+function parseFiscalQr(raw){
+ try{
+  var s=String(raw||'').trim(),q=s.indexOf('?')>=0?s.slice(s.indexOf('?')+1):s,o={};
+  q.split('&').forEach(function(p){var i=p.indexOf('=');if(i>0)o[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1).replace(/\+/g,' '))});
+  if(!o.t||!o.s||!o.fn)return null;
+  var m=/^(\d{4})-?(\d{2})-?(\d{2})T(\d{2}):?(\d{2})/.exec(o.t);
+  if(!m)return null;
+  var sum=parseFloat(String(o.s).replace(/\s/g,'').replace(',','.'));
+  if(!(sum>=0))return null;
+  return{date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5],sum:sum,fn:o.fn,fd:o.i||'',fp:o.fp||'',raw:s};
+ }catch(e){return null}
+}
+function loadJsQR(){return new Promise(function(res,rej){
+ if(window.jsQR)return res(window.jsQR);
+ var sc=document.createElement('script');sc.src='jsqr.min.js';
+ sc.onload=function(){window.jsQR?res(window.jsQR):rej(new Error('Библиотека QR не загрузилась'))};
+ sc.onerror=function(){rej(new Error('Библиотека QR не загрузилась, нужен интернет'))};
+ document.head.appendChild(sc)})}
+function qrScan(jsQR,src,sw,sh,mx,ac,pad,inv){
+ var k=Math.min(1,mx/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k)),p=pad?Math.round(Math.max(w,h)*0.1):0;
+ var c=qrScan.c||(qrScan.c=document.createElement('canvas'));c.width=w+2*p;c.height=h+2*p;
+ var x=c.getContext('2d',{willReadFrequently:true});
+ x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(src,p,p,w,h);
+ var d=x.getImageData(0,0,c.width,c.height),a=d.data,n=c.width*c.height,i;
+ if(ac){
+  var L=new Uint8Array(n),H=new Array(256).fill(0);
+  for(i=0;i<n;i++){var v=(a[i*4]*77+a[i*4+1]*150+a[i*4+2]*29)>>8;L[i]=v;H[v]++}
+  var lo=0,hi=255,t=n*0.02,acc=0;
+  for(i=0;i<256;i++){acc+=H[i];if(acc>=t){lo=i;break}}
+  acc=0;for(i=255;i>=0;i--){acc+=H[i];if(acc>=t){hi=i;break}}
+  if(hi-lo<20){lo=0;hi=255}
+  var sc=255/(hi-lo);
+  for(i=0;i<n;i++){var y=(L[i]-lo)*sc;y=y<0?0:y>255?255:y;a[i*4]=a[i*4+1]=a[i*4+2]=y;a[i*4+3]=255}
+ }
+ var r=jsQR(a,c.width,c.height,{inversionAttempts:inv?'attemptBoth':'dontInvert'});
+ return r&&r.data?r.data:null;
+}
+function openQrScanner(onRaw){
+ var ov=document.createElement('div');ov.className='ov';ov.style.zIndex=70;ov.style.alignItems='center';
+ ov.innerHTML='<div class="sh" style="border-radius:22px;margin:0 12px"><div class="shh"><b>Скан QR чека</b><button class="x" type="button" id="qrX">✕</button></div><div class="shb"><video id="qrV" playsinline muted style="width:100%;border-radius:14px;background:#000;min-height:200px;max-height:46vh;object-fit:cover"></video><div class="mut sm" id="qrMsg" style="margin:8px 0 12px">Наведите камеру на QR-код на чеке. Держите 15–25 см, дождитесь резкости, чек лучше расправить.</div><label class="btn sec full">🖼️ Выбрать фото чека<input id="qrF" type="file" accept="image/*" hidden></label></div></div>';
+ document.body.appendChild(ov);
+ var v=ov.querySelector('#qrV'),msg=ov.querySelector('#qrMsg'),f=ov.querySelector('#qrF'),stream=null,stop=false;
+ function close(){stop=true;try{stream&&stream.getTracks().forEach(function(t){t.stop()})}catch(e){}ov.remove()}
+ ov.querySelector('#qrX').onclick=close;
+ ov.addEventListener('click',function(e){if(e.target===ov)close()});
+ loadJsQR().then(function(jsQR){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg.textContent='Камера недоступна. Выберите фото чека ниже.';return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){
+   if(stop){s.getTracks().forEach(function(t){t.stop()});return}
+   stream=s;v.srcObject=s;var pl=v.play();if(pl&&pl.catch)pl.catch(function(){});
+   var last=0,pn=0,busy=false,PS=[[1600,0],[1100,1],[900,0],[1600,1],[1300,0]],bd=null,tr=s.getVideoTracks&&s.getVideoTracks()[0];
+   try{if(window.BarcodeDetector)bd=new BarcodeDetector({formats:['qr_code']})}catch(e){bd=null}
+   try{var caps=tr&&tr.getCapabilities?tr.getCapabilities():{};
+    if(caps.focusMode&&caps.focusMode.indexOf('continuous')>=0)tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){});
+    if(caps.torch){var tb=document.createElement('button');tb.type='button';tb.className='btn sec full';tb.style.marginBottom='10px';tb.textContent='🔦 Фонарик';var on=false;
+     tb.onclick=function(){on=!on;tr.applyConstraints({advanced:[{torch:on}]}).catch(function(){})};msg.parentNode.insertBefore(tb,msg.nextSibling)}}catch(e){}
+   (function tick(ts){
+    if(stop)return;
+    if(v.readyState>=2&&v.videoWidth&&ts-last>140&&!busy){
+     last=ts;var found=null;
+     if(bd){busy=true;bd.detect(v).then(function(r){busy=false;if(r&&r[0]&&r[0].rawValue&&!stop){close();onRaw(r[0].rawValue)}}).catch(function(){busy=false;bd=null})}
+     var ps=PS[pn++%PS.length];
+     try{found=qrScan(jsQR,v,v.videoWidth,v.videoHeight,ps[0],ps[1],false,false)}catch(e){}
+     if(found&&!stop){close();onRaw(found);return}
+    }
+    requestAnimationFrame(tick)})(0);
+  }).catch(function(e){msg.textContent=(e&&e.name==='NotAllowedError')?'Нет доступа к камере. Разрешите в Настройки → Safari → Камера или выберите фото чека ниже.':'Камера недоступна. Выберите фото чека ниже.'});
+ }).catch(function(e){msg.textContent=e.message});
+ f.onchange=function(){
+  var file=f.files&&f.files[0];if(!file)return;msg.textContent='Читаю фото…';
+  loadJsQR().then(function(jsQR){
+   var url=URL.createObjectURL(file),im=new Image();
+   im.onload=function(){
+    var PP=[[1600,0,0],[1600,1,0],[1000,0,0],[1000,1,0],[2400,0,0],[2400,1,1],[700,1,0],[3200,0,0],[1600,1,1]],pi=0;
+    function step(){
+     var found=null;
+     try{found=qrScan(jsQR,im,im.width,im.height,PP[pi][0],PP[pi][1],PP[pi][2],true)}catch(e){}
+     if(found){URL.revokeObjectURL(url);close();onRaw(found);return}
+     if(++pi<PP.length){msg.textContent='Читаю фото… '+pi+'/'+PP.length;setTimeout(step,30)}
+     else{URL.revokeObjectURL(url);msg.textContent='QR не найден на фото. Снимите ближе и резче: QR должен занимать хотя бы четверть кадра, чек расправьте.'}}
+    step();};
+   im.onerror=function(){msg.textContent='Не удалось открыть фото'};
+   im.src=url;
+  }).catch(function(e){msg.textContent=e.message});
+ };
+}
+</script>
+</body>
+</html>
