@@ -1568,6 +1568,23 @@ document.addEventListener("visibilitychange", () => {
   }
 })();
 
+
+window.helperIn=function(text){
+  var raw=String(text||"");
+  if(/подписк/i.test(raw)){
+    var sm=parseExpenseSpeech(raw),nm=raw.replace(/подписк[а-я]*/ig,"").replace(/(за|на|в|по)?\s*(месяц|год|недел)[а-я]*/ig,"").replace(/\d+([.,]\d+)?/g,"").replace(/(^|\s)(тысяч[а-я]*|рубл[а-я]*|руб|р|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|один|одна|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|пятнадцать)(?=\s|$)/ig," ").replace(/\s+/g," ").trim();
+    subForm(null);
+    var o=(function(l){return l[l.length-1]})(document.querySelectorAll(".ov"));if(!o)return true;
+    var n=o.querySelector("[name=name]"),s=o.querySelector("[name=sum]");
+    if(n&&nm)n.value=nm.charAt(0).toUpperCase()+nm.slice(1);if(s&&sm&&sm.sum)s.value=sm.sum;
+    var per=/год/i.test(raw)?"y":/недел/i.test(raw)?"w":null,b=per&&o.querySelector('[data-per="'+per+'"]');if(b)b.click();
+    return true;
+  }
+  var x=parseExpenseSpeech(raw);
+  if(!x||!(x.sum>0)){toast("Не расслышал сумму: «"+raw+"»");return false}
+  var pre={sum:x.sum};if(x.date)pre.date=x.date;if(x.note)pre.note=x.note;if(x.cat)pre.cat=x.cat;
+  expForm(null,pre);return true;
+};
 </script>
 </body>
 </html>

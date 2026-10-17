@@ -2302,6 +2302,34 @@ function openQrScanner(onRaw){
   }).catch(function(e){msg.textContent=e.message});
  };
 }
+
+function hSkel(w){var m={а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"j",з:"s",и:"i",й:"i",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"s",ч:"c",ш:"s",щ:"s",ъ:"",ы:"i",ь:"",э:"e",ю:"u",я:"a"};
+ var t=String(w).toLowerCase().split("").map(function(c){return m[c]!=null?m[c]:c}).join("");
+ t=t.replace(/x/g,"ks").replace(/[cq]/g,"k").replace(/z/g,"s").replace(/w/g,"v").replace(/[aeiouyh]/g,"").replace(/[^a-z]/g,"");return t.replace(/(.)\1+/g,"$1")}
+
+window.helperIn=function(text){
+  var raw=String(text||""),tk=raw.toLowerCase().split(/[^а-яёa-z0-9]+/).filter(Boolean),car=null;
+  for(var i=0;i<S.cars.length&&!car;i++){
+    var nt=String(S.cars[i].name||"").toLowerCase().split(/[^а-яёa-z0-9]+/).filter(function(w){return w.length>2&&w!=="мой"&&w!=="моя"&&w!=="авто"&&w!=="автомобиль"});
+    for(var a=0;a<nt.length&&!car;a++){var k1=hSkel(nt[a]);if(k1.length<2)continue;
+      for(var b=0;b<tk.length;b++){var k2=hSkel(tk[b]);if(k2.length>=2&&(k2===k1||(k1.length>=3&&k2.indexOf(k1)===0)||(k2.length>=3&&k1.indexOf(k2)===0))){car=S.cars[i];break}}}
+  }
+  if(car){S.active=car.id;save();render()}
+  if(!curCar()){toast("Сначала добавьте автомобиль");return false}
+  var v=parseFuelSpeech(raw,{odo:curCar().odo,places:(S.places||[]).map(function(p){return p.name})});
+  if(v.liters==null&&v.sum==null){toast("Не расслышал литры или сумму: «"+raw+"»");return false}
+  recForm(null,{type:"fuel",lock:true});
+  var o=(function(l){return l[l.length-1]})(document.querySelectorAll(".ov"));if(!o)return true;
+  var q=function(n){return o.querySelector("[name="+n+"]")},set=function(n,val){var e=q(n);if(e&&val!=null){e.value=val;e.dispatchEvent(new Event("input",{bubbles:true}))}},rd=function(x){return Math.round(x*100)/100};
+  set("ppl",v.price);set("liters",v.liters);
+  if(v.sum!=null)set("cost",v.sum);else if(v.liters!=null&&v.price!=null)set("cost",rd(v.liters*v.price));
+  if(v.liters==null&&v.sum!=null&&v.price)set("liters",rd(v.sum/v.price));
+  if(v.odo!=null)set("odo",Math.round(v.odo));
+  if(v.full!=null){var f=q("full");if(f)f.checked=v.full}
+  if(v.place)set("place",v.place);
+  toast("🎤 "+(curCar().name||"")+": "+vwSummary(v));
+  return true;
+};
 </script>
 </body>
 </html>

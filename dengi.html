@@ -2517,6 +2517,13 @@ document.addEventListener("visibilitychange", () => {
   }
 })();
 
+
+window.helperIn=function(text){
+  var x=parseTx(text);
+  if(!x||!(x.sum>0)){toast("Не расслышал сумму: «"+text+"»");return false}
+  var pre={};["type","acc","to","sum","date","note","cat"].forEach(function(k){if(x[k]!=null&&x[k]!=="")pre[k]=x[k]});
+  txForm(null,pre);return true;
+};
 </script>
 </body>
 </html>

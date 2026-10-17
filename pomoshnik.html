@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Помощник">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1116">
+<title>Мой помощник</title>
+<link rel="apple-touch-icon" sizes="180x180" href="pomoshnik-icon-180.png">
+<link rel="manifest" href="pomoshnik-manifest.json">
+<style>
+:root{--bg:#f4f5f8;--card:#fff;--card2:#eceef3;--txt:#14161c;--mut:#6b7280;--acc:#7c3aed;--acc2:#ec4899;--bd:rgba(0,0,0,.08)}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#181c24;--card2:#222733;--txt:#eef0f4;--mut:#9aa3b2;--bd:rgba(255,255,255,.1)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+#top{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;gap:6px;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 8px;background:var(--bg);border-bottom:1px solid var(--bd)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;font-size:12px;color:var(--mut);background:var(--card2)}
+.tab b{font-size:20px;line-height:1.1}
+.tab.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:600}
+#frames{position:fixed;left:0;right:0;bottom:0;top:64px}
+iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
+iframe.on{display:block}
+#mic{position:fixed;left:16px;bottom:calc(78px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:27px;box-shadow:0 6px 18px rgba(124,58,237,.45);z-index:20;display:grid;place-items:center}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sh{background:var(--bg);width:100%;max-width:600px;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.shh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:18px}
+.x{width:40px;height:40px;border-radius:50%;background:var(--card2);font-size:18px}
+.big{width:100%;padding:18px;border-radius:16px;font-size:18px;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.big.rec{animation:pl 1s infinite}
+@keyframes pl{50%{opacity:.65}}
+.mut{color:var(--mut);font-size:14px}
+textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font:inherit;resize:vertical}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chip{padding:8px 12px;border-radius:999px;background:var(--card2);font-size:14px}
+.chip.on{background:var(--acc);color:#fff}
+.btn{width:100%;padding:14px;border-radius:14px;background:var(--card2);font-weight:600}
+.btn.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
+</style>
+</head>
+<body>
+<div id="top"></div>
+<div id="frames"></div>
+<button id="mic" aria-label="Записать голосом">🎤</button>
+<script>
+(function () {
+  var SECS = [
+    { id: "money", n: "Деньги", i: "💰", url: "dengi.html" },
+    { id: "spend", n: "Траты", i: "🧾", url: "trati.html" },
+    { id: "warr", n: "Гарантии", i: "🛡️", url: "garantii.html" },
+    { id: "auto", n: "Авто", i: "🚗", url: "avto2.html" }
+  ];
+  var byId = {};
+  SECS.forEach(function (s) { byId[s.id] = s; });
+  var cur = "money", frames = {}, ls = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  var top = document.getElementById("top"), box = document.getElementById("frames");
+  top.innerHTML = SECS.map(function (s) {
+    return '<button class="tab" data-s="' + s.id + '"><b>' + s.i + '</b>' + s.n + '</button>';
+  }).join("");
+  function layout() { box.style.top = top.offsetHeight + "px"; }
+  window.addEventListener("resize", layout);
+  function frameFor(id) {
+    if (!frames[id]) {
+      var f = document.createElement("iframe");
+      f.src = byId[id].url;
+      f.setAttribute("allow", "microphone; camera");
+      f.dataset.s = id;
+      box.appendChild(f);
+      frames[id] = f;
+    }
+    return frames[id];
+  }
+  function show(id) {
+    if (!byId[id]) id = "money";
+    cur = id;
+    ls.set("ph_tab", id);
+    frameFor(id);
+    Object.keys(frames).forEach(function (k) { frames[k].classList.toggle("on", k === id); });
+    Array.prototype.forEach.call(top.children, function (b) { b.classList.toggle("on", b.dataset.s === id); });
+  }
+  top.addEventListener("click", function (e) {
+    var b = e.target.closest(".tab");
+    if (b) show(b.dataset.s);
+  });
+
+  // что куда относится
+  function classify(t) {
+    var s = String(t || "").toLowerCase().replace(/ё/g, "е");
+    if (/подписк|ежемесячн.* списан|автоплатеж/.test(s)) return "spend";
+    if (/гаранти|чек на (технику|покупку)/.test(s)) return "warr";
+    if (/заправ|залил|залила|долил|литр|бензин|дизел|солярк|азс|топлив|аи ?-? ?9|пробег|одометр|спидометр/.test(s)) return "auto";
+    return "money";
+  }
+
+  function go(id, text) {
+    var fresh = !frames[id];
+    show(id);
+    var f = frames[id];
+    function run(n) {
+      var w = f.contentWindow;
+      if (w && typeof w.helperIn === "function") {
+        try { w.helperIn(text); } catch (e) { alert("Не получилось открыть: " + e.message); }
+      } else if (n < 60) setTimeout(function () { run(n + 1); }, 150);
+    }
+    if (fresh) f.addEventListener("load", function () { setTimeout(function () { run(0); }, 900); });
+    else run(0);
+  }
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function openVoice() {
+    var o = document.createElement("div");
+    o.className = "ov";
+    o.innerHTML = '<div class="sh"><div class="shh"><b>Что записать?</b><button class="x" id="vX">✕</button></div>' +
+      '<button class="big" id="vMic">🎤 Говорите…</button>' +
+      '<div class="mut" id="vMsg" style="margin-top:10px">Например: «заправился тридцать литров в лексус», «купил хлеб сто двадцать», «купил пылесос в днс, гарантия два года, двадцать пять тысяч», «подписка яндекс плюс четыреста».</div>' +
+      '<textarea id="vTxt" placeholder="Что услышал (можно исправить)"></textarea>' +
+      '<div class="chips" id="vCh"></div>' +
+      '<button class="btn pri" id="vGo">Продолжить</button></div>';
+    document.body.appendChild(o);
+    var T = o.querySelector("#vTxt"), M = o.querySelector("#vMic"), Msg = o.querySelector("#vMsg"), Ch = o.querySelector("#vCh");
+    var sec = "money", manual = false, rec = null, done = false;
+    function draw() {
+      Ch.innerHTML = SECS.map(function (s) {
+        return '<button class="chip' + (s.id === sec ? " on" : "") + '" data-s="' + s.id + '">' + s.i + " " + s.n + "</button>";
+      }).join("");
+    }
+    function upd() { if (!manual) sec = classify(T.value); draw(); }
+    function close() { try { rec && rec.abort(); } catch (e) {} done = true; o.remove(); }
+    function proceed() {
+      var t = T.value.trim();
+      if (!t) return;
+      var s = sec;
+      close();
+      go(s, t);
+    }
+    T.oninput = upd;
+    Ch.onclick = function (e) {
+      var b = e.target.closest(".chip");
+      if (!b) return;
+      sec = b.dataset.s; manual = true; draw();
+    };
+    o.querySelector("#vX").onclick = close;
+    o.querySelector("#vGo").onclick = proceed;
+    o.addEventListener("click", function (e) { if (e.target === o) close(); });
+    function listen() {
+      if (!SR) {
+        M.style.display = "none";
+        Msg.textContent = "Распознавание речи здесь недоступно. Нажмите на поле ниже и продиктуйте микрофоном на клавиатуре, затем «Продолжить».";
+        T.focus();
+        return;
+      }
+      try {
+        rec = new SR();
+        rec.lang = "ru-RU";
+        rec.interimResults = true;
+        rec.continuous = false;
+        M.classList.add("rec");
+        M.textContent = "🎤 Слушаю…";
+        rec.onresult = function (e) {
+          var s = "";
+          for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript;
+          T.value = s;
+          upd();
+        };
+        rec.onerror = function (e) {
+          M.classList.remove("rec");
+          M.textContent = "🎤 Нажмите и говорите";
+          Msg.textContent = e.error === "not-allowed" ? "Нет доступа к микрофону. Разрешите его в настройках Safari или продиктуйте через клавиатуру." : "Не расслышал. Нажмите ещё раз или впишите текст.";
+        };
+        rec.onend = function () {
+          M.classList.remove("rec");
+          M.textContent = "🎤 Нажмите и говорите";
+          if (!done && T.value.trim()) proceed();
+        };
+        rec.start();
+      } catch (e) {
+        Msg.textContent = "Не удалось включить микрофон. Впишите текст ниже.";
+      }
+    }
+    M.onclick = listen;
+    draw();
+    listen();
+  }
+  document.getElementById("mic").addEventListener("click", openVoice);
+
+  var q = new URLSearchParams(location.search), start = q.get("tab") || ls.get("ph_tab") || "money";
+  layout();
+  show(start);
+  setInterval(function () {
+    var f = frames[cur], busy = false;
+    try { busy = !!(f && f.contentWindow.document.querySelector(".ov")); } catch (e) {}
+    document.getElementById("mic").style.display = busy ? "none" : "grid";
+  }, 400);
+  window.helperGo = go;
+  if (location.hash === "#voice") setTimeout(openVoice, 300);
+})();
+</script>
+</body>
+</html>

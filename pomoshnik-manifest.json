@@ -1,0 +1,13 @@
+{
+  "name": "Мой помощник",
+  "short_name": "Помощник",
+  "start_url": "/pomoshnik.html",
+  "scope": "/pomoshnik.html",
+  "display": "standalone",
+  "theme_color": "#0e1116",
+  "background_color": "#0e1116",
+  "icons": [
+    {"src": "pomoshnik-icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "pomoshnik-icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
