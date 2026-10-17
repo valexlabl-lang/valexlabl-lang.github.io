@@ -49,7 +49,6 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
 (function () {
   var SECS = [
     { id: "money", n: "Деньги", i: "💰", url: "dengi.html" },
-    { id: "spend", n: "Траты", i: "🧾", url: "trati.html" },
     { id: "warr", n: "Гарантии", i: "🛡️", url: "garantii.html" },
     { id: "auto", n: "Авто", i: "🚗", url: "avto2.html" }
   ];
@@ -92,7 +91,7 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
   // что куда относится
   function classify(t) {
     var s = String(t || "").toLowerCase().replace(/ё/g, "е");
-    if (/подписк|ежемесячн.* списан|автоплатеж/.test(s)) return "spend";
+    if (/подписк|регулярн|ежемесячн|автоплатеж/.test(s)) return "money";
     if (/гаранти|чек на (технику|покупку)/.test(s)) return "warr";
     if (/заправ|залил|залила|долил|литр|бензин|дизел|солярк|азс|топлив|аи ?-? ?9|пробег|одометр|спидометр/.test(s)) return "auto";
     return "money";
@@ -112,6 +111,18 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
     else run(0);
   }
 
+  // заправка из «Авто» → расход «Топливо» в «Деньгах» (создаётся, меняется, удаляется вместе с ней)
+  window.helperFuel = function (p) {
+    var fresh = !frames.money, f = frameFor("money");
+    function run(n) {
+      var w = f.contentWindow;
+      if (w && typeof w.fuelSync === "function") {
+        try { w.fuelSync(p); } catch (e) {}
+      } else if (n < 80) setTimeout(function () { run(n + 1); }, 150);
+    }
+    if (fresh) f.addEventListener("load", function () { setTimeout(function () { run(0); }, 900); });
+    else run(0);
+  };
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition, activeRec = null;
   function openVoice() {
     var o = document.createElement("div");

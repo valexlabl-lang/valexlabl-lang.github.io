@@ -1602,6 +1602,7 @@ function recForm(id, pre = {}) {
     }
     const i = S.records.findIndex((x) => x.id === rec.id);
     i >= 0 ? S.records[i] = rec : S.records.push(rec);
+    fuelPush(rec, rec.type === "fuel" && rec.cost > 0 ? "set" : "del");
     if (odo != null && odo > (car.odo || 0)) car.odo = odo;
     save();
     closeSheet();
@@ -1877,6 +1878,15 @@ function ftFile(file) {
   };
   fr.readAsText(file);
 }
+function fuelPush(rec, op) {
+  try {
+    const P = window.parent;
+    if (!P || P === window || typeof P.helperFuel !== "function") return;
+    const car = S.cars.find((c) => c.id === rec.carId);
+    P.helperFuel({ id: rec.id, op, date: rec.date, sum: rec.cost, note: "Заправка " + (car ? car.name : "") + (rec.liters ? " · " + (Math.round(rec.liters * 100) / 100) + " л" : "") + (rec.place ? " · " + rec.place : "") });
+  } catch (e) {
+  }
+}
 function printReport() {
   const car = curCar(), rs = carRecs(car.id), st = stats(car, 0), rl = remList(car);
   $("#print").innerHTML = `<h1>${esc(car.name)}</h1><div>${esc([car.make, car.year, car.plate, car.vin && "VIN " + car.vin].filter(Boolean).join(" · "))}<br>Пробег: ${km(car.odo)} · Отчёт от ${fmtDate(today())}</div>
@@ -1992,7 +2002,9 @@ const A = {
   },
   recDel: (d) => {
     if (confirm("Удалить запись?")) {
+      const gone = S.records.find((x) => x.id === d.id);
       S.records = S.records.filter((x) => x.id !== d.id);
+      if (gone && gone.type === "fuel") fuelPush(gone, "del");
       save();
       closeSheet();
       render();
@@ -2020,6 +2032,7 @@ const A = {
   },
   carDel: (d) => {
     if (confirm("Удалить автомобиль вместе со всеми записями и напоминаниями?")) {
+      S.records.filter((x) => x.carId === d.id && x.type === "fuel").forEach((x) => fuelPush(x, "del"));
       S.cars = S.cars.filter((c) => c.id !== d.id);
       ["records", "reminders", "docs"].forEach((k) => S[k] = S[k].filter((x) => x.carId !== d.id));
       S.active = S.cars[0] && S.cars[0].id;

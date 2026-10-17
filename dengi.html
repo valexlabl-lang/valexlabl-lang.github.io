@@ -806,6 +806,7 @@ const CAT = {};
 const KWDEF = {
   e: [
     ["subs", /подписк|netflix|нетфликс|спотифай|spotify|яндекс плюс|кинопоиск|icloud|айклауд|youtube premium|чатгпт|chatgpt|yandex ?plus|kinopoisk|apple\.com|google ?play|vk ?music/],
+    ["fuel", /бензин|заправк|азс|топлив|дизел|солярк|аи ?-? ?9[2358]/],
     ["car", /бензин|заправк|парковк|мойк|штраф|запчаст|шиномонтаж|автомойк|осаго|гибдд|масло|azs|lukoil|rosneft|gazprom|tatneft|shell|neste/],
     ["fun", /билет[а-я]* (в |на )?(кино|театр|концерт|цирк|музей)|кино|игр|театр|концерт|развлеч|боулинг|клуб|квест|музей/],
     ["transport", /такси|метро|автобус|проезд|маршрутк|электричк|самокат|билет|поезд|самолет|авиа|трамвай|убер|ситимобил|яндекс го|taxi|uber|citymobil|yandex ?go|rzd|aeroflot|s7|pobeda/],
@@ -851,13 +852,18 @@ function syncCats() {
     S.cats.push(c);
     CAT.other_in = c;
   }
+  if (!CAT.fuel) {
+    const c = { id: "fuel", k: "e", n: "Топливо", i: "⛽", c: "#f59e0b", kw: "" };
+    S.cats.push(c);
+    CAT.fuel = c;
+  }
   if (!S.accounts || !S.accounts.length) S.accounts = blank().accounts;
   S.tx.forEach((x) => {
     if (x.type !== "t" && !CAT[x.cat]) x.cat = x.type === "i" ? "other_in" : "other";
   });
 }
 const catsOf = (k) => S.cats.filter((c) => c.k === k);
-const accs = (all) => S.accounts.filter((a) => all || !a.arch);
+const accs = (all) => S.accounts.filter((a) => all || !a.arch).sort((p, q) => (q.t === "credit") - (p.t === "credit"));
 const accOf = (id) => S.accounts.find((a) => a.id === id) || { n: "—", i: "❓", c: "#8e8e93" };
 const TYPES = { e: "Расход", i: "Доход", t: "Перевод" };
 const ATYPES = { cash: ["Наличные", "💵", "#10b981"], card: ["Банковская карта", "💳", "#3b82f6"], savings: ["Накопления, вклад", "🏦", "#8b5cf6"], credit: ["Кредитная карта", "💳", "#ef4444"], wallet: ["Электронный кошелёк", "👛", "#f59e0b"], other: ["Другое", "💼", "#64748b"] };
@@ -1194,7 +1200,7 @@ function budgetNote(out) {
 }
 function txForm(id, pre) {
   const ex = id ? S.tx.find((x) => x.id === id) : null;
-  const last = S.tx.slice().reverse().find((x) => x.type !== "t"), defAcc = (accs().find((a) => last && a.id === last.acc) || accs()[0] || S.accounts[0]).id;
+  const last = S.tx.slice().reverse().find((x) => x.type !== "t"), defAcc = (credits()[0] || accs().find((a) => last && a.id === last.acc) || accs()[0] || S.accounts[0]).id;
   const r = Object.assign(ex ? JSON.parse(JSON.stringify(ex)) : { id: uid(), type: "e", date: today(), sum: "", acc: defAcc, to: null, cat: null, note: "", fiscal: null, createdAt: Date.now() }, pre || {});
   fixTx(r);
   const notes = [...new Set(S.tx.slice().reverse().map((x) => x.note).filter(Boolean))].slice(0, 40);
@@ -1451,6 +1457,7 @@ function accForm(id) {
   let manual = !!ex;
   const o = sheet(ex ? "Счёт" : "Новый счёт", `<form id="af">
  <div id="apv" style="text-align:center;margin:4px 0 14px"></div>
+ ${ex ? `<button type="button" class="btn sec full" data-a="topUp" data-id="${ex.id}" style="margin-bottom:12px">➕ Пополнить ${ex.t === "credit" ? "карту" : "счёт"}</button>` : ""}
  <div class="f"><label>Название</label><input name="n" maxlength="24" autocomplete="off" placeholder="например: Сбер, Копилка" value="${esc(r.n)}"></div>
  ${fld("Тип", `<select name="t">${Object.entries(ATYPES).map(([k, v]) => `<option value="${k}" ${r.t === k ? "selected" : ""}>${v[1]} ${v[0]}</option>`).join("")}</select>`)}
  <div class="f"><label>Картинка</label><div class="emo">${ACC_ICONS.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join("")}</div></div>
@@ -1752,7 +1759,7 @@ function credCard(a, bm) {
   return `<div class="card"><div class="flex between"><b>${a.i} ${esc(a.n)}</b><b style="${ci.debt > 0 ? "color:var(--bad)" : ""}">${ci.debt > 0 ? "долг " + money(ci.debt) : "долга нет"}</b></div>
  ${ci.lim ? `<div class="bar ${ci.used > 100 ? "over" : ci.used >= 85 ? "soon" : ""}"><div style="width:${Math.min(100, ci.used)}%"></div></div><div class="flex between sm mut"><span>Лимит ${money(ci.lim)}</span><span style="${ci.avail < 0 ? "color:var(--bad)" : ""}">${ci.avail < 0 ? "превышен на " + money(-ci.avail) : "доступно " + money(ci.avail)}</span></div>` : '<div class="sm mut" style="margin-top:4px">Лимит не задан</div>'}
  <div class="sm" style="margin-top:6px;color:${col};font-weight:${col !== "var(--mut)" ? 600 : 400}">${dueTxt}</div>
- <div class="two" style="margin-top:10px">${ci.debt > 0 ? `<button class="btn" data-a="credPay" data-id="${a.id}">💸 Погасить</button>` : `<button class="btn sec" data-a="addT" data-t="e">➖ Расход</button>`}<button class="btn sec" data-a="accOpen" data-id="${a.id}">✏️ Изменить</button></div></div>`;
+ <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:10px">${ci.debt > 0 ? `<button class="btn" data-a="credPay" data-id="${a.id}">💸 Погасить</button>` : `<button class="btn sec" data-a="addT" data-t="e">➖ Расход</button>`}<button class="btn sec" data-a="topUp" data-id="${a.id}">➕ Пополнить</button><button class="btn sec" data-a="accOpen" data-id="${a.id}" aria-label="Изменить">✏️</button></div></div>`;
 }
 function accSub(a, bm) {
   if (a.t === "credit") {
@@ -2050,7 +2057,8 @@ function dataView() {
   const lb = S.settings.lastBackup;
   return backBar("Данные и настройки") + `<h3>Резервные копии</h3><div class="card"><p class="sm mut" style="margin-top:0">Всё хранится только в памяти этого телефона. Если очистить данные Safari или удалить значок, записи пропадут, поэтому периодически делайте копию. Последняя: <b>${lb ? fmtDate(lb) : "не делалась"}</b></p>
  <div style="display:grid;gap:8px"><button class="btn" data-a="exp">💾 Скачать файл-копию (.json)</button><button class="btn sec" data-a="share">📤 Отправить / сохранить в «Файлы»</button><button class="btn sec" data-a="csvAll">📑 Все операции в таблицу (.csv)</button>
- <label class="btn sec">📥 Загрузить копию из файла<input type="file" accept=".json,application/json" hidden data-imp></label></div><div class="sm mut" id="usage" style="margin-top:10px"></div></div>
+ <label class="btn sec">📥 Загрузить копию из файла<input type="file" accept=".json,application/json" hidden data-imp></label>
+ <label class="btn sec">📥 Перенести из «Трат» (файл)<input type="file" accept=".json,application/json" hidden data-trimp></label></div><div class="sm mut" id="usage" style="margin-top:10px"></div></div>
  <h3>Сигналы</h3><div class="card"><label class="sw"><input type="checkbox" id="alPop" ${S.settings.alertPopup !== false ? "checked" : ""}> Окно «Скоро платежи» при первом открытии за день</label>
  ${window.Notification && navigator.setAppBadge ? `<button class="btn sec full" data-a="badgeOn" style="margin-top:8px">🔴 Значок на иконке приложения${Notification.permission === "granted" ? " · включён" : ""}</button>` : ""}</div>
  <h3>Оформление</h3><div class="card"><div class="f" style="margin:0"><label>Тема</label><select id="th">${[["auto", "Авто"], ["dark", "Тёмная"], ["light", "Светлая"]].map((t) => `<option value="${t[0]}" ${S.settings.theme === t[0] ? "selected" : ""}>${t[1]}</option>`).join("")}</select></div></div>
@@ -2220,6 +2228,65 @@ function icsPlan() {
   const text = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//dengi//RU", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Платежи"].concat(ev, ["END:VCALENDAR"]).join("\r\n") + "\r\n";
   return fileOut(new Blob([text], { type: "text/calendar;charset=utf-8" }), "platezhi.ics", "text/calendar", "Платежи");
 }
+
+const TR_BASE = { food: "food", cafe: "cafe", transport: "transport", car: "car", home: "home", health: "health", fun: "fun", shop: "shop", subs: "subs", other: "other" };
+function trCat(id, d) {
+  if (TR_BASE[id]) return TR_BASE[id];
+  const src = (d.cats || []).find((c) => c && c.id === id);
+  if (!src || !src.n) return "other";
+  const ex = S.cats.find((c) => c.k === "e" && norm(c.n) === norm(src.n));
+  if (ex) return ex.id;
+  let nid = String(id);
+  while (CAT[nid]) nid = "t" + nid;
+  const c = { id: nid, k: "e", n: src.n, i: src.i || "📦", c: src.c || "#8e8e93", kw: src.kw || "" };
+  S.cats.push(c);
+  CAT[nid] = c;
+  return nid;
+}
+function trSheet(d) {
+  const exps = (d.exp || []).filter((x) => x && +x.sum > 0 && x.date), have = new Set(S.tx.map((x) => x.id));
+  const fresh = exps.filter((x) => !have.has("tr_" + x.id));
+  const subs = (d.subs || []).filter((x) => x && x.name && +x.sum > 0), haveP = new Set(S.plan.map((x) => x.id));
+  const freshS = subs.filter((x) => !haveP.has("tr_" + x.id));
+  const nCat = (d.cats || []).filter((c) => c && c.n && !S.cats.some((k) => k.k === "e" && norm(k.n) === norm(c.n))).length;
+  const total = fresh.reduce((t, x) => t + (+x.sum), 0);
+  const o = sheet("📥 Перенос из «Трат»", `<div class="card"><div class="kv"><span>Трат в файле</span><span>${exps.length}</span></div><div class="kv"><span>Новых трат</span><span><b>${fresh.length}</b> на ${money(total)}</span></div><div class="kv"><span>Своих категорий</span><span>${nCat} новых</span></div><div class="kv"><span>Подписок → регулярные платежи</span><span>${freshS.length}</span></div></div>
+ <p class="sm mut">Траты попадут на отдельный счёт «Из «Трат»» с начальным балансом, который это компенсирует: остальные балансы не изменятся, а в отчётах и по категориям траты будут видны. Повторный перенос дубли не создаёт. Приложение «Траты» не изменяется.</p>
+ <button class="btn full" id="trGo" ${fresh.length || freshS.length ? "" : "disabled"}>Перенести</button>`);
+  $("#trGo", o).onclick = () => {
+    let acc = S.accounts.find((a) => a.id === "a_tr");
+    if (!acc) {
+      acc = { id: "a_tr", n: "Из «Трат»", t: "cash", i: "📥", c: "#94a3b8", start: 0 };
+      S.accounts.push(acc);
+    }
+    acc.start = Math.round(((+acc.start || 0) + total) * 100) / 100;
+    fresh.forEach((x) => {
+      S.tx.push({ id: "tr_" + x.id, type: "e", date: x.date, sum: +x.sum, acc: "a_tr", to: null, cat: trCat(x.cat, d), note: x.note || "", fiscal: x.fiscal || null, src: "trati", createdAt: x.createdAt || Date.now() });
+    });
+    const pay = (S.accounts.find((a) => a.id === "a_card") || accs()[0]).id;
+    freshS.forEach((x) => {
+      const nx = x.next || today();
+      S.plan.push({ id: "tr_" + x.id, name: x.name, type: "e", sum: +x.sum, acc: pay, cat: "subs", per: PERS[x.per] ? x.per : "m", next: nx, anchor: +String(nx).slice(8, 10) || 1, active: x.active !== false });
+    });
+    save();
+    closeSheet();
+    render();
+    toast("Перенесено: трат " + fresh.length + ", подписок " + freshS.length + " ✓");
+  };
+}
+function trFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d = null;
+    try {
+      d = JSON.parse(fr.result);
+    } catch (e) {
+    }
+    if (!d || !Array.isArray(d.exp)) return toast("Это не файл приложения «Траты»");
+    trSheet(d);
+  };
+  fr.readAsText(file);
+}
 async function exportJSON(shr) {
   const name = "dengi-" + today() + ".json", blob = new Blob([JSON.stringify(S)], { type: "application/json" });
   if (shr) {
@@ -2313,6 +2380,14 @@ const A = {
   },
   openTx: (d) => txForm(d.id),
   accOpen: (d) => accForm(d.id),
+  topUp: (d) => {
+    const a = S.accounts.find((x) => x.id === d.id), bm = balMap();
+    closeSheet();
+    if (a.t === "credit") {
+      const src = accs().filter((x) => x.t !== "credit" && x.id !== a.id).sort((p, q) => (bm[q.id] || 0) - (bm[p.id] || 0))[0];
+      txForm(null, { type: "t", acc: src && src.id, to: a.id, sum: "", note: "Пополнение: " + a.n });
+    } else txForm(null, { type: "i", acc: a.id, note: "Пополнение: " + a.n });
+  },
   credPay: (d) => {
     const a = S.accounts.find((x) => x.id === d.id), bm = balMap(), ci = credInfo(a, bm);
     const src = accs().filter((x) => x.t !== "credit" && x.id !== a.id).sort((p, q) => (bm[q.id] || 0) - (bm[p.id] || 0))[0];
@@ -2463,6 +2538,10 @@ document.addEventListener("change", (e) => {
     importFile(t.files[0]);
     t.value = "";
   }
+  if (t.matches && t.matches("[data-trimp]") && t.files[0]) {
+    trFile(t.files[0]);
+    t.value = "";
+  }
   if (t.matches && t.matches("[data-csv]") && t.files[0]) {
     importCsv(t.files[0]);
     t.value = "";
@@ -2519,10 +2598,33 @@ document.addEventListener("visibilitychange", () => {
 
 
 window.helperIn=function(text){
-  var x=parseTx(text);
-  if(!x||!(x.sum>0)){toast("Не расслышал сумму: «"+text+"»");return false}
+  var raw=String(text||"");
+  if(/подписк|регулярн|ежемесячн|каждый месяц/i.test(raw)){
+    var sm=parseTx(raw);
+    var nm=raw.replace(/подписк[а-я]*|регулярн[а-я]*|ежемесячн[а-я]*|каждый месяц/ig," ").replace(/(за|на|в|по)?\s*(месяц|год|недел)[а-я]*/ig," ").replace(/\d+([.,]\d+)?/g," ").replace(/(^|\s)(тысяч[а-я]*|рубл[а-я]*|руб|р|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|один|одна|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|пятнадцать)(?=\s|$)/ig," ").replace(/\s+/g," ").trim();
+    planForm(null);
+    var l=document.querySelectorAll(".ov"),o=l[l.length-1];if(!o)return true;
+    var q=function(n){return o.querySelector("[name="+n+"]")};
+    if(q("name")&&nm)q("name").value=nm.charAt(0).toUpperCase()+nm.slice(1);
+    if(q("sum")&&sm&&sm.sum)q("sum").value=sm.sum;
+    var per=/год/i.test(raw)?"y":/недел/i.test(raw)?"w":/(3|три) месяц|квартал/i.test(raw)?"q":"m";
+    if(q("per"))q("per").value=per;
+    var d=new Date();d.setMonth(d.getMonth()+(per==="m"?1:0));if(per==="y")d.setFullYear(d.getFullYear()+1);if(per==="w")d.setDate(d.getDate()+7);if(per==="q")d.setMonth(d.getMonth()+3);
+    if(q("next"))q("next").value=iso(d);
+    return true;
+  }
+  var x=parseTx(raw);
+  if(!x||!(x.sum>0)){toast("Не расслышал сумму: «"+raw+"»");return false}
   var pre={};["type","acc","to","sum","date","note","cat"].forEach(function(k){if(x[k]!=null&&x[k]!=="")pre[k]=x[k]});
   txForm(null,pre);return true;
+};
+window.fuelSync=function(p){
+  var i=S.tx.findIndex(function(x){return x.fuelId===p.id});
+  if(p.op==="del"||!(+p.sum>0)){if(i>=0){S.tx.splice(i,1);save();render()}return true}
+  var t=i>=0?S.tx[i]:null,cr=credits()[0],acc=t?t.acc:(cr||S.accounts.find(function(a){return a.id==="a_card"})||accs()[0]).id;
+  var rec={id:t?t.id:uid(),type:"e",date:p.date,sum:+p.sum,acc:acc,to:null,cat:"fuel",note:p.note||"Заправка",fiscal:t?t.fiscal||null:null,fuelId:p.id,src:"avto",createdAt:t?t.createdAt:Date.now()};
+  if(t)S.tx[i]=rec;else S.tx.push(rec);
+  save();render();return true;
 };
 </script>
 </body>
