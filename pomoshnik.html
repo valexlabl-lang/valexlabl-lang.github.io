@@ -131,7 +131,7 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
       }).join("");
     }
     function upd() { if (!manual) sec = classify(T.value); draw(); }
-    function close() { done = true; try { if (rec) { rec.__retry = true; rec.abort(); } } catch (e) {} o.remove(); }
+    function close() { done = true; if (rec) { var r0 = rec; r0.onresult = r0.onerror = r0.onend = null; try { r0.abort(); } catch (e) {} } rec = null; activeRec = null; o.remove(); }
     function proceed() {
       var t = T.value.trim();
       if (!t) return;
@@ -148,67 +148,68 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
     o.querySelector("#vX").onclick = close;
     o.querySelector("#vGo").onclick = proceed;
     o.addEventListener("click", function (e) { if (e.target === o) close(); });
-    var tries = 0;
-    function startRec() {
-      if (done) return;
-      try {
-        rec = new SR();
-        activeRec = rec;
-        var mine = rec, got = false;
-        rec.lang = "ru-RU";
-        rec.interimResults = true;
-        rec.continuous = false;
-        M.classList.add("rec");
-        M.textContent = "🎤 Слушаю…";
-        rec.onresult = function (e) {
-          var s = "";
-          got = true;
-          for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript;
-          T.value = s;
-          upd();
-        };
-        rec.onerror = function (e) {
-          if (activeRec === mine) activeRec = null;
-          M.classList.remove("rec");
-          M.textContent = "🎤 Нажмите и говорите";
-          if (done) return;
-          if ((e.error === "aborted" || e.error === "audio-capture" || e.error === "network") && tries < 3) {
-            tries++;
-            mine.__retry = true;
-            setTimeout(startRec, 600);
-            return;
-          }
-          Msg.textContent = e.error === "not-allowed" || e.error === "service-not-allowed" ? "Нет доступа к микрофону. Разрешите его в настройках Safari или продиктуйте через клавиатуру." : "Не расслышал. Нажмите 🎤 ещё раз или впишите текст.";
-        };
-        rec.onend = function () {
-          if (activeRec === mine) activeRec = null;
-          if (mine.__retry) return;
-          M.classList.remove("rec");
-          M.textContent = "🎤 Нажмите и говорите";
-          if (done) return;
-          if (T.value.trim()) proceed();
-          else if (!got && Msg.textContent.indexOf("Не расслышал") < 0 && Msg.textContent.indexOf("Нет доступа") < 0) Msg.textContent = "Не расслышал. Нажмите 🎤 ещё раз или впишите текст.";
-        };
-        rec.start();
-      } catch (e) {
-        activeRec = null;
-        if (tries < 3) { tries++; setTimeout(startRec, 600); }
-        else Msg.textContent = "Не удалось включить микрофон. Впишите текст ниже.";
-      }
+    var listening = false;
+    function setIdle() {
+      listening = false;
+      M.classList.remove("rec");
+      M.textContent = "🎤 Нажмите и говорите";
     }
     function listen() {
+      if (listening) {
+        try { rec && rec.stop(); } catch (e) {}
+        return;
+      }
       if (!SR) {
         M.style.display = "none";
         Msg.textContent = "Распознавание речи здесь недоступно. Нажмите на поле ниже и продиктуйте микрофоном на клавиатуре, затем «Продолжить».";
         T.focus();
         return;
       }
-      tries = 0;
+      // запуск строго внутри нажатия (iOS иначе молча отказывает); старый сеанс просто бросаем
       if (activeRec) {
-        try { activeRec.__retry = true; activeRec.abort(); } catch (e) {}
+        var old = activeRec;
         activeRec = null;
-        setTimeout(startRec, 500);
-      } else startRec();
+        old.onresult = old.onerror = old.onend = null;
+        try { old.abort(); } catch (e) {}
+      }
+      try {
+        rec = new SR();
+        var mine = rec;
+        activeRec = mine;
+        rec.lang = "ru-RU";
+        rec.interimResults = true;
+        rec.continuous = false;
+        rec.maxAlternatives = 1;
+        rec.onresult = function (e) {
+          var s = "";
+          for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript + " ";
+          T.value = s.trim();
+          upd();
+        };
+        rec.onerror = function (e) {
+          var c = e && e.error;
+          if (activeRec === mine) activeRec = null;
+          setIdle();
+          if (done) return;
+          Msg.textContent = c === "not-allowed" || c === "service-not-allowed" ? "Нет доступа к микрофону. Разрешите его в настройках Safari или продиктуйте через клавиатуру." : c === "no-speech" ? "Ничего не услышал. Нажмите 🎤 и повторите." : "Не получилось (" + (c || "ошибка") + "). Нажмите 🎤 ещё раз или впишите текст.";
+        };
+        rec.onend = function () {
+          if (activeRec === mine) activeRec = null;
+          setIdle();
+          if (done) return;
+          if (T.value.trim()) proceed();
+        };
+        T.value = "";
+        Msg.textContent = "Слушаю… говорите, затем замолчите.";
+        M.textContent = "⏹ Слушаю… (нажмите, чтобы закончить)";
+        M.classList.add("rec");
+        listening = true;
+        rec.start();
+      } catch (e) {
+        activeRec = null;
+        setIdle();
+        Msg.textContent = "Не удалось включить микрофон. Нажмите 🎤 ещё раз или впишите текст.";
+      }
     }
     M.onclick = listen;
     draw();
