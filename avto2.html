@@ -9,9 +9,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0e1116">
 <title>Дневник авто 2</title>
-<link rel="apple-touch-icon" sizes="180x180" href="avto2-icon-180.png">
-<link rel="manifest" href="avto2-manifest.json">
-<link rel="icon" type="image/png" href="avto2-icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="avto2-icon-180.png?v=2">
+<link rel="manifest" href="avto2-manifest.json?v=2">
+<link rel="icon" type="image/png" href="avto2-icon-180.png?v=2">
 <style>
 :root{--bg:#0e1116;--card:#171b22;--card2:#1f252e;--txt:#eef2f7;--mut:#8b96a5;--line:#273040;--acc:#4f8cff;--acc2:#7a5cff;--ok:#34c759;--warn:#ffb02e;--bad:#ff5a5f;--sh:0 8px 30px rgba(0,0,0,.35)}
 html[data-theme=light]{--bg:#f2f4f8;--card:#fff;--card2:#eef1f6;--txt:#161b22;--mut:#667386;--line:#dde3ec;--sh:0 8px 30px rgba(30,50,90,.12)}
@@ -464,6 +464,8 @@ function render() {
   setBadge(nAl);
   $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "service" && nAl ? '<b class="bdg">' + nAl + "</b>" : ""}${t[0] === "trips" && (tripGet() || {}).state === "run" ? " 🟢" : ""}</button>`).join("");
   $("#fab").style.display = car && (ui.view === "home" || ui.view === "history") ? "grid" : "none";
+  const nv = document.querySelector("nav");
+  if (nv) nv.style.display = car ? "" : "none";
   $("#top").innerHTML = car ? `<button class="carsel" data-a="cars"><span>🚗 ${esc(car.name)}</span> <small class="mut">▾</small></button><span class="pill">${km(car.odo)}</span>` : `<b style="font-size:18px">🚗 Дневник авто 2</b>`;
   const views = { home, history, service, stats: statsView, trips: tripsView, more };
   $("#view").innerHTML = !car && ui.view !== "more" ? welcome() : views[ui.view]();
@@ -1801,9 +1803,10 @@ function ftCount(d) {
   return { cars: cars.length, refills: cars.reduce((s, c) => s + (Array.isArray(c.refills) ? c.refills.length : 0), 0) };
 }
 function ftConvert(d) {
-  const out = { cars: [], records: [], oil: [] };
+  const out = { cars: [], records: [], oil: [], cur: d.currentCarId ? "ft_" + d.currentCarId : null };
   Object.values(d.cars || {}).forEach((c) => {
     const id = "ft_" + c.id, refills = Array.isArray(c.refills) ? c.refills : [];
+    if (!refills.length && !Object.keys(c.notes || {}).length && !(+(c.oilChange || {}).lastOdometer > 0)) return;
     const odos = refills.map((r) => +r.odometer).filter((v) => isFinite(v) && v > 0);
     const oil = c.oilChange || {};
     const notes = Object.entries(c.notes || {}).map(([k, v]) => k + ": " + (v && v.value != null ? v.value : v)).join("\n");
@@ -1844,6 +1847,7 @@ function ftOffer(d, from) {
         }
       } else S.reminders.push({ id: uid(), carId: x.carId, title: "Масло двигателя", km: x.km, months: 12, baseOdo: x.baseOdo });
     });
+    if (conv.cur && S.cars.some((c) => c.id === conv.cur) && (newC || !S.active)) S.active = conv.cur;
     if (!S.active || !S.cars.some((c) => c.id === S.active)) S.active = S.cars[0] && S.cars[0].id;
     save();
     closeSheet();
