@@ -892,6 +892,29 @@ function balMap() {
   });
   return m;
 }
+const credits = () => S.accounts.filter((a) => a.t === "credit" && !a.arch);
+function credInfo(a, bm) {
+  const bal = (bm || balMap())[a.id] || 0, debt = Math.max(0, -bal), lim = +a.limit || 0;
+  return { bal, debt, lim, avail: lim ? lim + bal : null, used: lim ? Math.round(debt / lim * 100) : null, left: a.due ? daysDiff(today(), a.due) : null };
+}
+function rollCredit() {
+  let ch = 0;
+  const bm = balMap();
+  credits().forEach((a) => {
+    if (!a.rec || !a.due || (bm[a.id] || 0) < 0) return;
+    let g = 0;
+    while (a.due < today() && g++ < 36) {
+      a.due = advance(a.due, "m", a.dueDay || D(a.due).getDate());
+      ch++;
+    }
+  });
+  if (ch) save();
+  return ch;
+}
+function soonCredit(days) {
+  const bm = balMap();
+  return credits().map((a) => ({ a, ci: credInfo(a, bm) })).filter((x) => x.ci.debt > 0 && x.ci.left != null && x.ci.left <= days).sort((p, q) => p.ci.left - q.ci.left);
+}
 const totalBal = (bm) => S.accounts.filter((a) => !a.hide).reduce((s, a) => s + (bm[a.id] || 0), 0);
 const between = (from, to) => S.tx.filter((x) => x.date >= from && x.date <= to);
 const inMonth = (ym) => S.tx.filter((x) => ymOf(x.date) === ym);
@@ -1152,6 +1175,13 @@ function fixTx(r) {
     if (!r.to || r.to === r.acc) r.to = (accs().find((a) => a.id !== r.acc) || {}).id || null;
   } else if (!CAT[r.cat] || CAT[r.cat].k !== r.type) r.cat = catOrder(r.type)[0];
 }
+function credNote(out) {
+  const a = S.accounts.find((x) => x.id === out.acc);
+  if (!a || a.t !== "credit" || out.type !== "e") return null;
+  const ci = credInfo(a);
+  if (ci.lim && ci.avail < 0) return "⚠️ " + a.n + ": лимит превышен на " + money(-ci.avail);
+  return "💳 " + a.n + ": долг " + money(ci.debt) + (ci.lim ? ", доступно " + money(ci.avail) : "");
+}
 function budgetNote(out) {
   if (out.type !== "e") return null;
   const lim = S.budget[out.cat];
@@ -1321,7 +1351,7 @@ function txForm(id, pre) {
     closeSheet();
     ui.ym = ymOf(out.date);
     render();
-    const bn = budgetNote(out), c = out.type === "t" ? null : catOf(out.cat, out.type);
+    const bn = budgetNote(out) || credNote(out), c = out.type === "t" ? null : catOf(out.cat, out.type);
     toast(bn || (ex ? "Сохранено ✓" : out.type === "t" ? "Перевод " + money(sum) : (out.type === "i" ? "+" : "−") + money(sum) + " · " + c.i + " " + c.n));
   };
 }
@@ -1424,7 +1454,10 @@ function accForm(id) {
  ${fld("Тип", `<select name="t">${Object.entries(ATYPES).map(([k, v]) => `<option value="${k}" ${r.t === k ? "selected" : ""}>${v[1]} ${v[0]}</option>`).join("")}</select>`)}
  <div class="f"><label>Картинка</label><div class="emo">${ACC_ICONS.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join("")}</div></div>
  <div class="f"><label>Цвет</label><div class="emo col">${CPAL.map((c) => `<button type="button" data-col="${c}" style="background:${c}"></button>`).join("")}</div></div>
- <div class="f"><label>${ex ? "Текущий остаток, ₽ (можно исправить)" : "Остаток сейчас, ₽"}</label><input name="bal" inputmode="decimal" value="${ex ? Math.round((bm[ex.id] || 0) * 100) / 100 : ""}" placeholder="0"></div>
+ <div id="crF" style="display:${r.t === "credit" ? "block" : "none"}"><div class="f"><label>Кредитный лимит, ₽</label><input name="limit" inputmode="decimal" value="${r.limit || ""}" placeholder="например: 100000"></div>
+ ${fld("Погасить долг до (крайняя дата)", `<input type="date" name="due" value="${r.due || ""}">`)}
+ <label class="sw" style="margin-bottom:12px"><input type="checkbox" name="rec" ${r.rec ? "checked" : ""}> Повторять каждый месяц (например, «платёж до 25 числа»)</label></div>
+ <div class="f"><label id="balL"></label><input name="bal" inputmode="decimal" value="${ex ? Math.round((r.t === "credit" ? -(bm[ex.id] || 0) : bm[ex.id] || 0) * 100) / 100 : ""}" placeholder="0"></div>
  <label class="sw" style="margin-bottom:8px"><input type="checkbox" name="hide" ${r.hide ? "checked" : ""}> Не учитывать в общем балансе (например, чужие или накопительные деньги)</label>
  ${ex ? `<label class="sw" style="margin-bottom:12px"><input type="checkbox" name="arch" ${r.arch ? "checked" : ""}> Архив: скрыть из выбора, история сохранится</label>` : ""}
  <button class="btn full" type="submit">Сохранить</button>
@@ -1435,10 +1468,18 @@ function accForm(id) {
     $$("[data-e]", o).forEach((b) => b.classList.toggle("on", b.dataset.e === r.i));
     $$("[data-col]", o).forEach((b) => b.classList.toggle("on", b.dataset.col === r.c));
   };
+  const balLabel = () => {
+    $("#balL", o).textContent = r.t === "credit" ? (ex ? "Текущий долг по карте, ₽ (сколько потрачено, можно исправить)" : "Текущий долг по карте, ₽ (сколько уже потрачено)") : ex ? "Текущий остаток, ₽ (можно исправить)" : "Остаток сейчас, ₽";
+  };
+  balLabel();
   sync();
   E.n.oninput = sync;
   E.t.onchange = () => {
+    const was = r.t === "credit";
     r.t = E.t.value;
+    if (was !== (r.t === "credit") && E.bal.value) E.bal.value = String(-pn(E.bal.value) || 0);
+    $("#crF", o).style.display = r.t === "credit" ? "block" : "none";
+    balLabel();
     if (!manual) {
       r.i = ATYPES[r.t][1];
       r.c = ATYPES[r.t][2];
@@ -1466,7 +1507,17 @@ function accForm(id) {
     if (!r.n) return toast("Введите название");
     if (S.accounts.some((a) => a.id !== r.id && norm(a.n) === norm(r.n))) return toast("Счёт с таким названием уже есть");
     r.hide = E.hide.checked;
-    const b = pn(E.bal.value) || 0;
+    const bIn = pn(E.bal.value) || 0, b = r.t === "credit" ? -bIn : bIn;
+    if (r.t === "credit") {
+      r.limit = pn(E.limit.value) || 0;
+      r.due = E.due.value || "";
+      r.dueDay = r.due ? D(r.due).getDate() : 0;
+      r.rec = E.rec.checked;
+    } else {
+      r.limit = 0;
+      r.due = "";
+      r.rec = false;
+    }
     if (ex) {
       r.arch = E.arch.checked;
       r.start = Math.round(((+ex.start || 0) + (b - (bm[ex.id] || 0))) * 100) / 100;
@@ -1693,6 +1744,22 @@ function debtSheet(id) {
 }
 
 /* ---------- общие куски ---------- */
+function credCard(a, bm) {
+  const ci = credInfo(a, bm), lv = ci.left;
+  const dueTxt = a.due ? (ci.debt > 0 ? "Погасить до " + fmtDate(a.due) + " · " + whenText(lv) : "Долга нет · следующий срок " + fmtDate(a.due)) : "Крайняя дата не задана";
+  const col = ci.debt > 0 && lv != null && lv < 0 ? "var(--bad)" : ci.debt > 0 && lv != null && lv <= 3 ? "var(--warn)" : "var(--mut)";
+  return `<div class="card"><div class="flex between"><b>${a.i} ${esc(a.n)}</b><b style="${ci.debt > 0 ? "color:var(--bad)" : ""}">${ci.debt > 0 ? "долг " + money(ci.debt) : "долга нет"}</b></div>
+ ${ci.lim ? `<div class="bar ${ci.used > 100 ? "over" : ci.used >= 85 ? "soon" : ""}"><div style="width:${Math.min(100, ci.used)}%"></div></div><div class="flex between sm mut"><span>Лимит ${money(ci.lim)}</span><span style="${ci.avail < 0 ? "color:var(--bad)" : ""}">${ci.avail < 0 ? "превышен на " + money(-ci.avail) : "доступно " + money(ci.avail)}</span></div>` : '<div class="sm mut" style="margin-top:4px">Лимит не задан</div>'}
+ <div class="sm" style="margin-top:6px;color:${col};font-weight:${col !== "var(--mut)" ? 600 : 400}">${dueTxt}</div>
+ <div class="two" style="margin-top:10px">${ci.debt > 0 ? `<button class="btn" data-a="credPay" data-id="${a.id}">💸 Погасить</button>` : `<button class="btn sec" data-a="addT" data-t="e">➖ Расход</button>`}<button class="btn sec" data-a="accOpen" data-id="${a.id}">✏️ Изменить</button></div></div>`;
+}
+function accSub(a, bm) {
+  if (a.t === "credit") {
+    const ci = credInfo(a, bm);
+    return "Кредитка" + (ci.lim ? " · доступно " + money(ci.avail) : "") + (ci.debt > 0 && a.due ? " · до " + fmtDate(a.due).slice(0, 5) : "");
+  }
+  return (ATYPES[a.t] ? ATYPES[a.t][0] : "") + (a.hide ? " · вне баланса" : "");
+}
 const pos = (n) => n < 0 ? "color:var(--bad)" : "";
 const monthBar = () => `<div class="flex between" style="margin-bottom:12px"><button class="x" data-a="ymPrev">‹</button><b style="font-size:17px">${ymName(ui.ym)}</b><button class="x" data-a="ymNext" ${ui.ym >= ymOf(today()) ? "disabled style='opacity:.35'" : ""}>›</button></div>`;
 const backBar = (t) => `<div class="flex" style="margin-bottom:12px"><button class="x" data-a="subBack">‹</button><b style="font-size:19px">${t}</b></div>`;
@@ -1722,15 +1789,16 @@ function homeView() {
   const bm = balMap(), tot = totalBal(bm), l = inMonth(ui.ym), inc = sumOf(l, "i"), exp = sumOf(l, "e"), ls = limSums(l);
   const rows = byCat(l, "e").slice(0, 5), sp = soonPlan(7), sd = soonDebts(7), mx = rows.length ? rows[0][1] : 1;
   const owe = S.debts.filter((d) => !d.closed && d.dir === "owe").reduce((s, d) => s + d.sum - (d.paid || 0), 0), lent = S.debts.filter((d) => !d.closed && d.dir === "lent").reduce((s, d) => s + d.sum - (d.paid || 0), 0);
-  const empty = !S.tx.length && S.accounts.every((a) => !+a.start);
-  return monthBar() + `<div class="card hero"><div class="sub">Всего на счетах</div><div class="odo" style="margin-top:4px">${money(tot)}</div>
+  const empty = !S.tx.length && S.accounts.every((a) => !+a.start), cr = credits(), crDebt = cr.reduce((s, a) => s + credInfo(a, bm).debt, 0), sc = soonCredit(7);
+  return monthBar() + `<div class="card hero"><div class="sub">Всего на счетах</div><div class="odo" style="margin-top:4px">${money(tot)}</div>${crDebt > 0 ? `<div class="sub" style="margin-top:2px">с учётом долга по кредиткам ${money(crDebt)}</div>` : ""}
  <div class="h3"><div><span>Доходы</span><b>+${money(inc)}</b></div><div><span>Расходы</span><b>−${money(exp)}</b></div><div><span>Итог</span><b>${inc - exp >= 0 ? "+" : "−"}${money(Math.abs(inc - exp))}</b></div></div></div>
  ${empty ? '<div class="card" style="border-left:4px solid var(--acc)"><b>Начните с остатков</b><div class="sm mut" style="margin:4px 0 10px">Откройте счёт ниже и укажите, сколько денег на нём сейчас. Потом записывайте доходы и расходы: голосом, по QR чека, из СМС банка или вручную.</div><button class="btn full" data-a="accsAll">Настроить счета</button></div>' : ""}
  <div class="grid4"><button class="qa" data-a="addT" data-t="e"><i>➖</i>Расход</button><button class="qa" data-a="addT" data-t="i"><i>➕</i>Доход</button><button class="qa" data-a="addT" data-t="t"><i>🔄</i>Перевод</button><button class="qa" data-a="addV"><i>🎤</i>Голосом</button></div>
  ${ls.lim > 0 ? `<h3>Бюджет месяца <button data-a="tab" data-v="budget">Подробнее</button></h3><div class="card"><div class="flex between"><b>${money(ls.spent)}</b><span class="mut">из ${money(ls.lim)}</span></div><div class="bar ${ls.spent > ls.lim ? "over" : ls.spent > ls.lim * 0.85 ? "soon" : ""}"><div style="width:${Math.min(100, Math.round(ls.spent / ls.lim * 100))}%"></div></div><div class="sm mut">${ls.spent > ls.lim ? "Лимиты превышены на " + money(ls.spent - ls.lim) : "Осталось " + money(ls.lim - ls.spent) + (perDay(ui.ym, ls.lim - ls.spent) ? " · " + perDay(ui.ym, ls.lim - ls.spent) : "")}</div></div>` : ""}
  <h3>Счета <button data-a="accsAll">Все</button></h3>
- <div class="card" style="padding:4px 14px">${accs().map((a) => `<button class="rec" data-a="accOpen" data-id="${a.id}"><div class="ic" style="background:${a.c}26">${a.i}</div><div class="m"><div class="t">${esc(a.n)}</div><div class="s">${ATYPES[a.t] ? ATYPES[a.t][0] : ""}${a.hide ? " · вне баланса" : ""}</div></div><div class="c" style="${pos(bm[a.id])}">${money(bm[a.id])}</div></button>`).join("")}</div>
- ${sp.length || sd.length ? `<h3>Скоро <button data-a="sub" data-v="plan">Все</button></h3><div class="card">${sp.slice(0, 3).map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="planOpen" data-id="${x.p.id}"><span>${x.p.type === "i" ? "💰" : "🔁"} ${esc(x.p.name)}</span><span class="sm">${whenText(x.left)} · ${x.p.type === "i" ? "+" : "−"}${money(x.p.sum)}</span></button>`).join("")}${sd.slice(0, 3).map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="debtOpen" data-id="${x.d.id}"><span>🤝 ${esc(x.d.who)}</span><span class="sm" style="${x.left < 0 ? "color:var(--bad)" : ""}">${whenText(x.left)} · ${money(x.d.sum - (x.d.paid || 0))}</span></button>`).join("")}</div>` : ""}
+ <div class="card" style="padding:4px 14px">${accs().map((a) => `<button class="rec" data-a="accOpen" data-id="${a.id}"><div class="ic" style="background:${a.c}26">${a.i}</div><div class="m"><div class="t">${esc(a.n)}</div><div class="s">${accSub(a, bm)}</div></div><div class="c" style="${pos(bm[a.id])}">${money(bm[a.id])}</div></button>`).join("")}</div>
+ ${cr.length ? `<h3>Кредитные карты <button data-a="sub" data-v="debts">Все</button></h3>${cr.map((a) => credCard(a, bm)).join("")}` : ""}
+ ${sp.length || sd.length || sc.length ? `<h3>Скоро <button data-a="sub" data-v="plan">Все</button></h3><div class="card">${sc.slice(0, 3).map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="accOpen" data-id="${x.a.id}"><span>💳 ${esc(x.a.n)}</span><span class="sm" style="${x.ci.left < 0 ? "color:var(--bad)" : ""}">${whenText(x.ci.left)} · долг ${money(x.ci.debt)}</span></button>`).join("")}${sp.slice(0, 3).map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="planOpen" data-id="${x.p.id}"><span>${x.p.type === "i" ? "💰" : "🔁"} ${esc(x.p.name)}</span><span class="sm">${whenText(x.left)} · ${x.p.type === "i" ? "+" : "−"}${money(x.p.sum)}</span></button>`).join("")}${sd.slice(0, 3).map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="debtOpen" data-id="${x.d.id}"><span>🤝 ${esc(x.d.who)}</span><span class="sm" style="${x.left < 0 ? "color:var(--bad)" : ""}">${whenText(x.left)} · ${money(x.d.sum - (x.d.paid || 0))}</span></button>`).join("")}</div>` : ""}
  ${S.goals.length ? `<h3>Цели <button data-a="sub" data-v="goals">Все</button></h3><div class="card">${S.goals.slice(0, 3).map((g) => `<button style="width:100%;text-align:left;display:block;margin:6px 0" data-a="goalOpen" data-id="${g.id}"><div class="flex between"><span>${g.i} ${esc(g.name)}</span><span class="sm mut">${Math.min(100, Math.round(g.saved / g.target * 100))}%</span></div><div class="bar"><div style="width:${Math.min(100, Math.round(g.saved / g.target * 100))}%"></div></div></button>`).join("")}</div>` : ""}
  ${owe || lent ? `<div class="tiles"><button class="tile" style="text-align:left" data-a="sub" data-v="debts"><div class="l">Я должен</div><div class="v" style="font-weight:800">${money(owe)}</div></button><button class="tile" style="text-align:left" data-a="sub" data-v="debts"><div class="l">Мне должны</div><div class="v" style="font-weight:800">${money(lent)}</div></button></div>` : ""}
  ${rows.length ? `<h3>Расходы по категориям <button data-a="tab" data-v="rep">Отчёты</button></h3><div class="card">${rows.map((r) => hbarRow(catOf(r[0], "e"), r[1], mx, "repCatM")).join("")}</div>` : ""}
@@ -1937,7 +2005,7 @@ function delta(cur, prev, goodUp) {
 }
 /* ---------- «Ещё» ---------- */
 function accRow(a, bm) {
-  return `<button class="rec" data-a="accOpen" data-id="${a.id}" style="${a.arch ? "opacity:.55" : ""}"><div class="ic" style="background:${a.c}26">${a.i}</div><div class="m"><div class="t">${esc(a.n)}</div><div class="s">${ATYPES[a.t] ? ATYPES[a.t][0] : ""}${a.hide ? " · вне баланса" : ""}${a.arch ? " · архив" : ""}</div></div><div class="c" style="${pos(bm[a.id])}">${money(bm[a.id])}</div></button>`;
+  return `<button class="rec" data-a="accOpen" data-id="${a.id}" style="${a.arch ? "opacity:.55" : ""}"><div class="ic" style="background:${a.c}26">${a.i}</div><div class="m"><div class="t">${esc(a.n)}</div><div class="s">${accSub(a, bm)}${a.arch ? " · архив" : ""}</div></div><div class="c" style="${pos(bm[a.id])}">${money(bm[a.id])}</div></button>`;
 }
 function accsView() {
   const bm = balMap();
@@ -1969,7 +2037,8 @@ function debtsView() {
     const left = d.sum - (d.paid || 0), lv = d.due ? daysDiff(today(), d.due) : 99;
     return `<button class="card" style="width:100%;text-align:left;${d.closed ? "opacity:.6" : ""}" data-a="debtOpen" data-id="${d.id}"><div class="flex between"><b>${d.dir === "owe" ? "Я должен" : "Мне должен"}: ${esc(d.who)}</b><b style="${d.dir === "lent" ? "color:var(--ok)" : ""}">${money(left)}</b></div><div class="bar"><div style="width:${Math.min(100, Math.round((d.paid || 0) / d.sum * 100))}%"></div></div><div class="flex between sm mut"><span>из ${money(d.sum)}</span><span style="${lv < 0 ? "color:var(--bad)" : ""}">${d.closed ? "закрыт" : d.due ? fmtDate(d.due).slice(0, 5) + " · " + whenText(lv) : ""}</span></div></button>`;
   };
-  return backBar("Долги") + '<button class="btn full" data-a="debtNew" style="margin-bottom:12px">➕ Добавить долг</button>' + (open.length ? open.map(row).join("") : '<div class="card empty"><b>🤝</b>Записывайте, кто вам должен и кому должны вы. Платежи по долгу можно сразу вносить в операции.</div>') + (done.length ? "<h3>Закрытые</h3>" + done.map(row).join("") : "");
+  const bm = balMap(), cr = credits();
+  return backBar("Долги") + (cr.length ? "<h3>Кредитные карты</h3>" + cr.map((a) => credCard(a, bm)).join("") + "<h3>Личные долги</h3>" : "") + '<button class="btn full" data-a="debtNew" style="margin-bottom:12px">➕ Добавить долг</button>' + (open.length ? open.map(row).join("") : '<div class="card empty"><b>🤝</b>Записывайте, кто вам должен и кому должны вы. Платежи по долгу можно сразу вносить в операции.</div>') + (done.length ? "<h3>Закрытые</h3>" + done.map(row).join("") : "");
 }
 function importView() {
   return backBar("Импорт выписки") + `<div class="card"><p style="margin-top:0">Загрузите выписку из банка в формате <b>CSV</b> (в приложении банка: «Выписка» или «Операции» → «Скачать» → CSV или Excel, затем «Сохранить как CSV»). Приложение определит дату, сумму и описание, подберёт категории и пропустит уже записанные операции.</p>
@@ -1990,13 +2059,14 @@ function dataView() {
 function moreView() {
   if (ui.sub) return { accs: accsView, cats: catsView, plan: planView, goals: goalsView, debts: debtsView, import: importView, data: dataView }[ui.sub]();
   const item = (v, i, t, s) => `<button class="rec" data-a="sub" data-v="${v}"><div class="ic" style="background:var(--card2)">${i}</div><div class="m"><div class="t">${t}</div><div class="s">${s}</div></div><span class="mut">›</span></button>`;
-  return `<h3>Разделы</h3><div class="card" style="padding:4px 14px">${item("accs", "🏦", "Счета", S.accounts.length + " " + plural(S.accounts.length, "счёт", "счёта", "счетов"))}${item("cats", "🏷️", "Категории", S.cats.length + " шт., можно добавлять свои")}${item("plan", "🔁", "Регулярные платежи", activePlan().length ? activePlan().length + " активных" : "аренда, подписки, зарплата")}${item("goals", "🎯", "Цели и накопления", S.goals.length ? S.goals.length + " шт." : "отпуск, подушка безопасности")}${item("debts", "🤝", "Долги", S.debts.filter((d) => !d.closed).length ? S.debts.filter((d) => !d.closed).length + " открытых" : "кто кому должен")}${item("import", "📥", "Импорт выписки из банка", "CSV-файл")}${item("data", "⚙️", "Данные и настройки", "копии, тема, сигналы")}</div><p class="mut sm" style="text-align:center">Домашняя бухгалтерия · данные хранятся только у вас</p>`;
+  return `<h3>Разделы</h3><div class="card" style="padding:4px 14px">${item("accs", "🏦", "Счета", S.accounts.length + " " + plural(S.accounts.length, "счёт", "счёта", "счетов"))}${item("cats", "🏷️", "Категории", S.cats.length + " шт., можно добавлять свои")}${item("plan", "🔁", "Регулярные платежи", activePlan().length ? activePlan().length + " активных" : "аренда, подписки, зарплата")}${item("goals", "🎯", "Цели и накопления", S.goals.length ? S.goals.length + " шт." : "отпуск, подушка безопасности")}${item("debts", "🤝", "Долги", S.debts.filter((d) => !d.closed).length + credits().filter((a) => credInfo(a).debt > 0).length ? "открытых: " + (S.debts.filter((d) => !d.closed).length + credits().filter((a) => credInfo(a).debt > 0).length) : "кредитки и личные долги")}${item("import", "📥", "Импорт выписки из банка", "CSV-файл")}${item("data", "⚙️", "Данные и настройки", "копии, тема, сигналы")}</div><p class="mut sm" style="text-align:center">Домашняя бухгалтерия · данные хранятся только у вас</p>`;
 }
 /* ---------- каркас ---------- */
 function render() {
   syncCats();
+  rollCredit();
   applyTheme();
-  const nSoon = soonPlan(3).length + soonDebts(3).length;
+  const nSoon = soonPlan(3).length + soonDebts(3).length + soonCredit(3).length;
   setBadge(nSoon);
   const tabs = [["home", "📊", "Обзор"], ["ops", "🧾", "Операции"], ["budget", "🎯", "Бюджет"], ["rep", "📈", "Отчёты"], ["more", "⚙️", "Ещё"]];
   $("#tabs").innerHTML = tabs.map((t) => `<button data-a="tab" data-v="${t[0]}" class="${ui.view === t[0] ? "on" : ""}"><i>${t[1]}</i>${t[2]}${t[0] === "more" && nSoon ? '<b class="bdg">' + nSoon + "</b>" : ""}</button>`).join("");
@@ -2198,11 +2268,11 @@ function importFile(file) {
 }
 function dailyAlert() {
   if (S.settings.alertPopup === false || S.settings.alertDay === today()) return;
-  const sp = soonPlan(3), sd = soonDebts(3);
-  if (!sp.length && !sd.length) return;
+  const sp = soonPlan(3), sd = soonDebts(3), sc = soonCredit(3);
+  if (!sp.length && !sd.length && !sc.length) return;
   S.settings.alertDay = today();
   save();
-  sheet("🔔 Скоро платежи", sp.map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="planOpen" data-id="${x.p.id}"><span>${esc(x.p.name)}</span><span class="sm">${whenText(x.left)} · ${x.p.type === "i" ? "+" : "−"}${money(x.p.sum)}</span></button>`).join("") + sd.map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="debtOpen" data-id="${x.d.id}"><span>🤝 ${esc(x.d.who)}</span><span class="sm">${whenText(x.left)} · ${money(x.d.sum - (x.d.paid || 0))}</span></button>`).join("") + '<button class="btn sec full" data-a="close" style="margin-top:12px">Понятно</button>');
+  sheet("🔔 Скоро платежи", sc.map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="accOpen" data-id="${x.a.id}"><span>💳 ${esc(x.a.n)}</span><span class="sm">${whenText(x.ci.left)} · долг ${money(x.ci.debt)}</span></button>`).join("") + sp.map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="planOpen" data-id="${x.p.id}"><span>${esc(x.p.name)}</span><span class="sm">${whenText(x.left)} · ${x.p.type === "i" ? "+" : "−"}${money(x.p.sum)}</span></button>`).join("") + sd.map((x) => `<button class="kv" style="width:100%;text-align:left" data-a="debtOpen" data-id="${x.d.id}"><span>🤝 ${esc(x.d.who)}</span><span class="sm">${whenText(x.left)} · ${money(x.d.sum - (x.d.paid || 0))}</span></button>`).join("") + '<button class="btn sec full" data-a="close" style="margin-top:12px">Понятно</button>');
 }
 /* ---------- действия ---------- */
 const A = {
@@ -2242,6 +2312,11 @@ const A = {
   },
   openTx: (d) => txForm(d.id),
   accOpen: (d) => accForm(d.id),
+  credPay: (d) => {
+    const a = S.accounts.find((x) => x.id === d.id), bm = balMap(), ci = credInfo(a, bm);
+    const src = accs().filter((x) => x.t !== "credit" && x.id !== a.id).sort((p, q) => (bm[q.id] || 0) - (bm[p.id] || 0))[0];
+    txForm(null, { type: "t", acc: src && src.id, to: a.id, sum: ci.debt || "", note: "Погашение: " + a.n });
+  },
   accNew: () => accForm(null),
   catEdit: (d) => catForm(d.id),
   catNew: (d) => catForm(null, d.k),
@@ -2347,7 +2422,7 @@ const A = {
         const p = await Notification.requestPermission();
         if (p !== "granted") return toast("Разрешение не выдано. Включить: Настройки iPhone, Уведомления");
       }
-      setBadge(soonPlan(3).length + soonDebts(3).length);
+      setBadge(soonPlan(3).length + soonDebts(3).length + soonCredit(3).length);
       render();
       toast("Значок включён ✓");
     } catch (e) {
@@ -2426,6 +2501,7 @@ document.addEventListener("visibilitychange", () => {
     syncCats();
     applyTheme();
     rollPlan();
+    rollCredit();
     render();
     setTimeout(dailyAlert, 700);
     if (navigator.storage && navigator.storage.estimate) {
