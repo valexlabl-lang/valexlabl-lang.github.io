@@ -23,8 +23,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tab b{font-size:20px;line-height:1.1}
 .tab.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:600}
 #frames{position:relative;flex:1;min-height:0}
-iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
-iframe.on{display:block}
+iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;visibility:hidden;pointer-events:none;z-index:0;background:var(--bg)}
+iframe.on{visibility:visible;pointer-events:auto;z-index:1}
 #mic{position:fixed;left:16px;bottom:calc(78px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:27px;box-shadow:0 6px 18px rgba(124,58,237,.45);z-index:20;display:grid;place-items:center}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .sh{background:var(--bg);width:100%;max-width:600px;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px))}
@@ -79,6 +79,7 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
     ls.set("ph_tab", id);
     frameFor(id);
     Object.keys(frames).forEach(function (k) { frames[k].classList.toggle("on", k === id); });
+    void box.offsetHeight;
     Array.prototype.forEach.call(top.children, function (b) { b.classList.toggle("on", b.dataset.s === id); });
   }
   top.addEventListener("click", function (e) {
@@ -90,7 +91,7 @@ textarea{width:100%;min-height:70px;margin-top:10px;padding:12px;border-radius:1
   function classify(t) {
     var s = String(t || "").toLowerCase().replace(/ё/g, "е");
     if (/подписк|регулярн|ежемесячн|автоплатеж/.test(s)) return "money";
-    if (/заправ|залил|залила|долил|литр|бензин|дизел|солярк|азс|топлив|аи ?-? ?9|пробег|одометр|спидометр/.test(s)) return "auto";
+    if (/заправ|залил|залила|долил|бензин|дизел|солярк|азс|топлив|аи ?-? ?9|пробег|одометр|спидометр/.test(s)) return "auto";
     return "money";
   }
 
