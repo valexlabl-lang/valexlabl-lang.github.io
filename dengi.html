@@ -811,6 +811,7 @@ const KWDEF = {
     ["subs", /подписк|netflix|нетфликс|спотифай|spotify|яндекс плюс|кинопоиск|icloud|айклауд|youtube premium|чатгпт|chatgpt|yandex ?plus|kinopoisk|apple\.com|google ?play|vk ?music/],
     ["fuel", /бензин|заправк|азс|топлив|дизел|солярк|аи ?-? ?9[2358]/],
     ["car", /бензин|заправк|парковк|мойк|штраф|запчаст|шиномонтаж|автомойк|осаго|гибдд|масло|azs|lukoil|rosneft|gazprom|tatneft|shell|neste/],
+    ["party", /(?:^|\s)(?:(?:пив[оауе]|вин[оауе]|ром|джин|ликер|пивка|винца)(?=\s|$)|(?:виски|водк|коньяк|шампанск|алкогол|закуск|шашлык|настойк|самогон|текил|сидр|чипс|сухарик|орешк|снек|пивн|пивк|водочк|вискарь|бухл)|на посиделки|на застолье|застолье)/],
     ["fun", /билет[а-я]* (в |на )?(кино|театр|концерт|цирк|музей)|кино|игр|театр|концерт|развлеч|боулинг|клуб|квест|музей/],
     ["transport", /такси|метро|автобус|проезд|маршрутк|электричк|самокат|билет|поезд|самолет|авиа|трамвай|убер|ситимобил|яндекс го|taxi|uber|citymobil|yandex ?go|rzd|aeroflot|s7|pobeda/],
     ["comm", /мобильн|связь|телефон|интернет|сотов|тариф|mts|megafon|beeline|tele2|rostelecom|yota/],
@@ -859,6 +860,11 @@ function syncCats() {
     const c = { id: "fuel", k: "e", n: "Топливо", i: "⛽", c: "#f59e0b", kw: "" };
     S.cats.push(c);
     CAT.fuel = c;
+  }
+  if (!CAT.party) {
+    const c = { id: "party", k: "e", n: "Застолье", i: "🍻", c: "#a855f7", kw: "" };
+    S.cats.push(c);
+    CAT.party = c;
   }
   if (!S.accounts || !S.accounts.length) S.accounts = blank().accounts;
   S.tx.forEach((x) => {
