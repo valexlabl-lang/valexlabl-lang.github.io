@@ -300,6 +300,7 @@ function vSet(){
  <label class="small" style="display:block;margin:10px 4px 4px">Топик (держите в секрете, это как пароль)</label><div class="row"><input class="inp" id="ntt" value="${esc(nt().topic)}" autocapitalize="off" autocorrect="off" placeholder="создастся при включении"><button class="btn g s" data-act="ntgen">Новый</button></div>
  <label class="small" style="display:block;margin:10px 4px 4px">Токен (если свой сервер с авторизацией)</label><input class="inp" id="ntk" type="password" value="${esc(nt().token)}" autocomplete="off">
  <div class="row" style="margin-top:12px"><button class="btn g sp" data-act="ntopen">Подписаться в ntfy</button><button class="btn g sp" data-act="nttest">Тест</button></div>
+ <div class="small" style="margin-top:14px"><b>Siri и «Команды»</b>: адрес, на который команда отправляет задачу текстом (метод POST):</div><div class="row" style="margin-top:6px"><input class="inp" readonly id="ntin" value="${esc(nt().topic?ntfyBase()+'/'+nt().topic+'-in':'включите ntfy')}"><button class="btn g s" data-act="ntcopy">Копировать</button></div>
  <div class="small" style="margin-top:10px">Заголовки задач передаются на выбранный сервер. Публичный ntfy.sh читает чужой, кто знает топик. Для приватности используйте длинный случайный топик или свой сервер. Отложенная доставка на ntfy.sh максимум на 3 суток, остальное досылается при открытии планера.</div></div>
  <div class="card"><b>Календарь iPhone</b><div class="small" style="margin:4px 0 10px">Выгрузка задач с датой в .ics: Календарь создаст события с напоминаниями, которые сработают даже при закрытом приложении.</div><button class="btn g" data-act="icsall">Экспорт всех задач (.ics)</button></div>
  <div class="card"><b>Резервная копия</b><div class="small" style="margin:4px 0 10px">Задачи, дневник и привычки (без голосовых записей).</div><div class="row"><button class="btn g sp" data-act="exp">Скачать .json</button><button class="btn g sp" data-act="imp">Загрузить</button></div><input type="file" id="impf" accept=".json,application/json" style="display:none"></div>
@@ -411,7 +412,26 @@ async function ntfySync(){
 function ntfyCancel(t){
  if(!ntfyOn()||!t||!t.ntfyAt)return;t.ntfyAt=null;
  fetch(ntfyBase()+'/'+encodeURIComponent(nt().topic)+'/p'+t.id,{method:'DELETE',headers:ntfyAuth()}).catch(()=>{})}
+let ntfyPulling=false;
+async function ntfyPull(){
+ if(ntfyPulling||!ntfyOn())return;ntfyPulling=true;
+ try{
+  const n=nt();
+  const r=await fetch(ntfyBase()+'/'+encodeURIComponent(n.topic+'-in')+'/json?poll=1&since='+encodeURIComponent(n.inSince||'1h'),{headers:ntfyAuth()});
+  if(r.ok){
+   let added=0,last=n.inSince;
+   for(const ln of (await r.text()).split('\n')){
+    if(!ln.trim())continue;let m;try{m=JSON.parse(ln)}catch(e){continue}
+    if(m.event!=='message'||!m.message)continue;last=m.id;
+    const o=parseNL(String(m.message).trim());if(!o.title)continue;
+    S.tasks.push(newTask(o));added++}
+   if(last!==n.inSince){n.inSince=last;save()}
+   if(added){render();toast('Из Siri добавлено задач: '+added);ntfySync()}
+  }
+ }catch(e){}
+ ntfyPulling=false}
 setInterval(ntfySync,300000);
+setInterval(ntfyPull,60000);
 
 /* ===== Напоминания ===== */
 async function sysNotify(title,body){
@@ -490,6 +510,7 @@ document.addEventListener('click',async e=>{
  if(a==='pgo'){if(P.run){P.left=pomoLeft();P.run=false}else{P.end=Date.now()+pomoLeft()*1000;P.run=true;if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}return render()}
  if(a==='prst'){P.run=false;P.left=null;P.mode='work';return render()}
  if(a==='pskip'){P.run=false;P.left=null;P.mode=P.mode==='work'?'break':'work';return render()}
+ if(a==='ntcopy'){if(!nt().topic)return toast('Сначала включите ntfy');try{await navigator.clipboard.writeText(ntfyBase()+'/'+nt().topic+'-in');toast('Адрес скопирован')}catch(x){const i=$('#ntin');i.focus();i.select();toast('Выделено, нажмите «Скопировать»')}return}
  if(a==='ntgen'){nt().topic=genTopic();S.tasks.forEach(t=>t.ntfyAt=null);save();render();return toast('Новый топик. Подпишитесь на него в ntfy заново')}
  if(a==='ntopen'){if(!nt().topic)return toast('Сначала включите ntfy');let h='ntfy.sh';try{h=new URL(ntfyBase()).host}catch(x){}location.href='ntfy://'+h+'/'+nt().topic;return}
  if(a==='nttest'){if(!nt().topic)return toast('Сначала включите ntfy');try{await ntfyPost({title:'Планер',message:'Тест: уведомления работают ✅',tags:['white_check_mark']});toast('Отправлено. Проверьте ntfy на телефоне')}catch(x){toast('Ошибка: '+x.message)}return}
@@ -517,7 +538,7 @@ document.addEventListener('change',e=>{
   else if(id==='nts')n.server=e.target.value.trim()||'https://ntfy.sh';
   else if(id==='ntt')n.topic=e.target.value.trim().replace(/[^\w-]/g,'');
   else n.token=e.target.value.trim();
-  S.tasks.forEach(t=>t.ntfyAt=null);save();render();ntfySync()}
+  n.inSince='';S.tasks.forEach(t=>t.ntfyAt=null);save();render();ntfySync();ntfyPull()}
  else if(id==='impf'){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.tasks))throw 0;const d=DEF();S=Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});save();applyTheme();render();toast('Данные загружены')}catch(x){toast('Неверный файл')}};r.readAsText(f)}
 });
 document.addEventListener('input',e=>{if(e.target.id==='sq'){fQ=e.target.value;render()}});
@@ -527,12 +548,12 @@ document.addEventListener('keydown',e=>{
  if(e.target.id==='e_s'){e.preventDefault();const b=document.querySelector('[data-act=suba]');b&&b.click()}
  if(e.target.id==='hn'){const b=document.querySelector('[data-act=hadd]');b&&b.click()}
 });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkReminders();ntfySync();pTick();if(tab==='today')render()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkReminders();ntfySync();ntfyPull();pTick();if(tab==='today')render()}});
 
 /* ===== Старт ===== */
 (async()=>{
  await DB.open();
- render();checkReminders();ntfySync();
+ render();checkReminders();ntfySync();ntfyPull();
  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 })();
