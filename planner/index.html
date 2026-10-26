@@ -135,7 +135,7 @@ const ICON='icon-192.png';
 
 /* ===== Разбор естественной речи: «завтра в 15:00 позвонить маме #семья срочно» ===== */
 function parseNL(raw){
- let s=' '+raw+' ',low=s.toLowerCase();const now=new Date();let date=null,time=null,prio=0,tag='',repeat='none';
+ let s=(' '+raw+' ').replace(/через\s+полчаса/gi,'через 30 минут').replace(/через\s+(час|минуту|день|неделю)(?=\s)/gi,'через 1 $1'),low=s.toLowerCase();const now=new Date();let date=null,time=null,prio=0,tag='',repeat='none';
  const cut=re=>{const m=low.match(re);if(!m)return null;s=s.slice(0,m.index)+' '+s.slice(m.index+m[0].length);low=s.toLowerCase();return m};
  let m;
  if(m=cut(/каждый\s+день|ежедневно/))repeat='daily';
@@ -162,7 +162,13 @@ function parseNL(raw){
  if(cut(/срочно|важно|!!!/))prio=3;
  if(m=cut(/#([^\s#]+)/))tag=m[1];
  if(time&&!date){const t=new Date(),[h,mi]=time.split(':').map(Number);date=(h*60+mi<t.getHours()*60+t.getMinutes())?addDays(today(),1):today()}
- let title=s.replace(/\s+/g,' ').trim().replace(/^(в|на|к|и|,)\s+/i,'').replace(/\s+(в|на|к|,)$/i,'').trim();
+ const LEAD=new Set(['в','во','на','к','ко','и','по']),PREP=new Set(['в','во','на','к','ко','по','о','об','за','с','со','до','от','и','а']);
+ const lw=x=>x.toLowerCase().replace(/[,;.]+$/,'');
+ let w=s.replace(/\s+/g,' ').replace(/^[,\s]+|[,\s]+$/g,'').split(' ').filter(Boolean);
+ while(w.length&&LEAD.has(lw(w[0])))w.shift();
+ while(w.length&&PREP.has(lw(w[w.length-1])))w.pop();
+ w=w.filter((x,i)=>!(PREP.has(lw(x))&&i+1<w.length&&PREP.has(lw(w[i+1]))));
+ let title=w.join(' ').trim();
  title=title.charAt(0).toUpperCase()+title.slice(1);
  return {title,date,time,prio,tag,repeat};
 }
